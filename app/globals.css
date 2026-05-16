@@ -5,23 +5,106 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --mewedding-rose: #b5606e;
+  --mewedding-blush: #f4c2c2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  details.faq-details .faq-chevron {
+    transition: transform 0.25s ease;
+  }
+
+  details.faq-details[open] .faq-chevron {
+    transform: rotate(180deg);
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /** Hover / tap mượt cho nút & link marketing */
+  .motion-soft {
+    transition-property: transform, box-shadow, opacity, border-color, background-color, color;
+    transition-duration: 0.45s;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /**
+   * Thẻ nổi nhẹ khi hover (pricing, testimonial, bước quy trình…).
+   * Giảm motion: chỉ đổi shadow, không dịch Y.
+   */
+  .card-hover {
+    transition-property: transform, box-shadow, border-color, background-color;
+    transition-duration: 0.45s;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 22px 48px -22px rgba(181, 96, 110, 0.16),
+      0 10px 24px -14px rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-hover:hover {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes gentle-float {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(-6px, 8px) scale(1.02);
+    }
+  }
+
+  @keyframes gentle-shimmer {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 0.75;
+    }
+  }
+
+  .animate-gentle-float {
+    animation: gentle-float 14s ease-in-out infinite;
+  }
+
+  .animate-gentle-shimmer {
+    animation: gentle-shimmer 8s ease-in-out infinite;
+  }
+}
+
+@keyframes char-pop {
+  from {
+    opacity: 0.35;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
