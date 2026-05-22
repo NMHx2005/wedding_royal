@@ -5,9 +5,25 @@ import type { ContactSettings, FaqItem, SeoSettings, SocialSettings } from "@/ty
 
 export const metadata = { title: "Admin — Settings" };
 
-const DEFAULT_CONTACT: ContactSettings = { email: "hello@mewedding.vn", phone: "", address: "", tax_url: "", working_hours: "" };
-const DEFAULT_SOCIAL: SocialSettings = { facebook: "", tiktok: "", youtube: "", zalo: "", instagram: "" };
-const DEFAULT_SEO: SeoSettings = { title: "meWedding", description: "", og_image: "" };
+const DEFAULT_CONTACT: ContactSettings = {
+  email: "hello@royalwedding.vn",
+  phone: "0282 2222 886",
+  address: "Tầng 5, 77 Nguyễn Huệ, Q.1, TP.HCM",
+  tax_url: "",
+  working_hours: "8:00 - 22:00, Thứ 2 - Chủ Nhật",
+};
+const DEFAULT_SOCIAL: SocialSettings = {
+  facebook: "https://facebook.com/royalwedding",
+  tiktok: "https://tiktok.com/@royalwedding",
+  youtube: "https://youtube.com/@royalwedding",
+  zalo: "https://zalo.me/royalwedding",
+  instagram: "",
+};
+const DEFAULT_SEO: SeoSettings = {
+  title: "Royal Wedding — Thiệp cưới online",
+  description: "Tạo thiệp cưới online — Royal Wedding",
+  og_image: "",
+};
 const DEFAULT_FAQ: FaqItem[] = [];
 
 export default async function AdminSettingsPage() {

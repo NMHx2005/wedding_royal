@@ -143,23 +143,24 @@ export function AuthMehappyShell({
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <Image
               src={`${MEHAPPY_ASSET}/images/logo-trong.png`}
-              alt="meWedding"
+              alt="Royal Wedding"
               width={120}
               height={48}
               className="h-8 w-auto sm:h-10 md:h-12"
               priority
             />
-            <span className="font-sans text-[20px] font-semibold text-neutral-900 sm:text-2xl">meWedding</span>
+            <span className="font-sans text-[20px] font-semibold text-neutral-900 sm:text-2xl">Royal Wedding</span>
           </Link>
           <nav className="flex flex-1 flex-wrap items-center justify-center gap-1 lg:gap-2" aria-label="Chính">
-            <a
-              href="https://mehappy.vn"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-neutral-800 transition hover:bg-white/60 hover:text-rose-600"
+            <Link
+              href="/"
+              className={clsx(
+                "rounded-lg px-3 py-2 text-sm font-medium text-neutral-800 transition hover:bg-white/60 hover:text-rose-600",
+                pathname === "/" && "bg-white/70 font-semibold text-rose-700",
+              )}
             >
-              MeHappy
-            </a>
+              Trang chủ
+            </Link>
             <Link
               href="/kho-giao-dien"
               className="rounded-lg px-3 py-2 text-sm font-medium text-neutral-800 transition hover:bg-white/60 hover:text-rose-600"
@@ -198,13 +199,13 @@ export function AuthMehappyShell({
         <Link href="/" className="flex min-w-0 shrink items-center gap-2">
           <Image
             src={`${MEHAPPY_ASSET}/images/logo-trong.png`}
-            alt="meWedding"
+            alt="Royal Wedding"
             width={96}
             height={40}
             className="h-8 w-auto"
             priority
           />
-          <span className="truncate text-[20px] font-semibold text-neutral-900">meWedding</span>
+          <span className="truncate text-[20px] font-semibold text-neutral-900">Royal Wedding</span>
         </Link>
         <AuthHeaderActionsMobile authMode={authMode} />
       </header>

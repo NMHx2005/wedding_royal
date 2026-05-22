@@ -92,7 +92,7 @@ export function TemplateGrid({ templates }: Props) {
               </div>
               <Link
                 href="/register"
-                className="motion-soft mt-auto flex w-full items-center justify-center rounded-xl bg-mewedding-rose py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#9d4f5d] hover:shadow-md active:scale-[0.99]"
+                className="motion-soft mt-auto flex w-full items-center justify-center rounded-xl bg-mewedding-rose py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-600 hover:shadow-md active:scale-[0.99]"
               >
                 Sử dụng mẫu
               </Link>
@@ -122,7 +122,7 @@ export function TemplateGrid({ templates }: Props) {
               onClick={() => setTab(f)}
               className={`motion-soft rounded-full px-3 py-1 text-xs font-medium ring-offset-2 active:scale-[0.97] ${
                 tab === f
-                  ? "bg-mewedding-rose text-white shadow-sm ring-2 ring-rose-200/60 hover:bg-[#9d4f5d]"
+                  ? "bg-mewedding-rose text-white shadow-sm ring-2 ring-rose-200/60 hover:bg-rose-600"
                   : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200/90 hover:ring-2 hover:ring-rose-100/80"
               }`}
             >

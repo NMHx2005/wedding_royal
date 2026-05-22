@@ -1,66 +1,89 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Music2 } from "lucide-react";
 
 type Props = {
   src: string | null | undefined;
 };
 
+function dispatchMusicEvent(type: "invitation:music:play" | "invitation:music:pause") {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(type));
+  }
+}
+
 export function BackgroundMusic({ src }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [unlocked, setUnlocked] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
-  const unlock = useCallback(async () => {
-    setUnlocked(true);
+  const play = useCallback(async () => {
     const el = audioRef.current;
-    if (!el || !src) return;
-    el.muted = false;
+    if (!el || !src) return false;
+    el.volume = 0.55;
     try {
-      el.volume = 0.6;
       await el.play();
+      setPlaying(true);
+      dispatchMusicEvent("invitation:music:play");
+      return true;
     } catch {
-      /* autoplay blocked until gesture */
+      setPlaying(false);
+      return false;
     }
   }, [src]);
+
+  const pause = useCallback(() => {
+    const el = audioRef.current;
+    if (el) el.pause();
+    setPlaying(false);
+    dispatchMusicEvent("invitation:music:pause");
+  }, []);
+
+  // Listen for native audio events (e.g. browser blocks autoplay → user starts elsewhere)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onPlay = () => { setPlaying(true); dispatchMusicEvent("invitation:music:play"); };
+    const onPause = () => { setPlaying(false); dispatchMusicEvent("invitation:music:pause"); };
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    return () => { el.removeEventListener("play", onPlay); el.removeEventListener("pause", onPause); };
+  }, []);
+
+  useEffect(() => {
+    if (!src) return;
+    const el = audioRef.current;
+    if (!el) return;
+    el.muted = false;
+    void play();
+  }, [src, play]);
+
+  const toggle = useCallback(async () => {
+    if (playing) {
+      pause();
+    } else {
+      await play();
+    }
+  }, [playing, pause, play]);
 
   if (!src) return null;
 
   return (
     <>
-      {!unlocked && (
-        <button
-          type="button"
-          onClick={unlock}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-6 text-center text-white"
+      <audio ref={audioRef} src={src} loop preload="auto" playsInline />
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        className="invitation-music-disc-btn fixed right-3 top-3 z-[95] sm:right-4 sm:top-4"
+        aria-label={playing ? "Tạm dừng nhạc nền" : "Phát nhạc nền"}
+        title={playing ? "Tạm dừng nhạc" : "Phát nhạc"}
+      >
+        <span
+          className={`invitation-music-disc ${playing ? "invitation-music-disc--spinning" : "invitation-music-disc--paused"}`}
         >
-          <span className="rounded-full bg-white/10 px-6 py-3 text-sm font-medium backdrop-blur">
-            Nhấn để mở thiệp
-          </span>
-        </button>
-      )}
-      <audio ref={audioRef} src={src} loop preload="none" muted={muted} />
-      {unlocked && (
-        <button
-          type="button"
-          onClick={() => {
-            setMuted((m) => {
-              const next = !m;
-              const el = audioRef.current;
-              if (el) {
-                el.muted = next;
-                if (!next) void el.play();
-              }
-              return next;
-            });
-          }}
-          className="fixed bottom-4 right-4 z-[90] flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white shadow-lg"
-          aria-label={muted ? "Bật nhạc" : "Tắt nhạc"}
-        >
-          {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-        </button>
-      )}
+          <Music2 className="invitation-music-disc__icon h-5 w-5" strokeWidth={2} />
+        </span>
+      </button>
     </>
   );
 }

@@ -6,8 +6,9 @@ values (
   '{
     "basic": {
       "name": "Basic",
-      "price": 0,
-      "description": "Gói miễn phí — thiệp cưới cơ bản",
+      "price": 198000,
+      "discount_percent": 49,
+      "description": "Gói Basic — thiệp cưới cơ bản",
       "max_cards": 1,
       "max_photos_album": 10,
       "max_photos": 10,
@@ -26,6 +27,7 @@ values (
     "pro": {
       "name": "Gói Pro",
       "price": 199000,
+      "discount_percent": 49,
       "description": "Gói Pro — nâng cấp",
       "max_cards": 2,
       "max_photos_album": 40,
@@ -45,6 +47,7 @@ values (
     "vip": {
       "name": "Gói VIP",
       "price": 399000,
+      "discount_percent": 52,
       "description": "Gói VIP — nâng cấp",
       "max_cards": 3,
       "max_photos_album": 100,

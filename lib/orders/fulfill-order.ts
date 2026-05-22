@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { payosAmountMatchesOrder } from "@/lib/orders/verify-payos-amount";
 
 type OrderRow = {
   id: string;
@@ -9,16 +10,20 @@ type OrderRow = {
   feature_keys: unknown;
   payos_order_id: string | null;
   video_order_id: string | null;
+  amount: number;
 };
 
 export async function fulfillPaidOrder(
   supabase: SupabaseClient,
   orderId: string,
-  payosOrderId?: string | null
+  payosOrderId?: string | null,
+  payosAmount?: number | null
 ): Promise<{ ok: boolean; error?: string }> {
   const { data: order, error: findErr } = await supabase
     .from("orders")
-    .select("id, card_id, plan, status, order_type, feature_keys, payos_order_id, video_order_id")
+    .select(
+      "id, card_id, plan, status, order_type, feature_keys, payos_order_id, video_order_id, amount"
+    )
     .eq("id", orderId)
     .maybeSingle();
 
@@ -28,6 +33,10 @@ export async function fulfillPaidOrder(
 
   if (order.status === "paid") {
     return { ok: true };
+  }
+
+  if (payosAmount != null && !payosAmountMatchesOrder(Number(order.amount), payosAmount)) {
+    return { ok: false, error: "Số tiền PayOS không khớp đơn hàng" };
   }
 
   const now = new Date().toISOString();

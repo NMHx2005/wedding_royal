@@ -1,4 +1,4 @@
-/** Nội dung & asset URL theo trang chủ meHappy / meWedding (tham chiếu HTML gốc). */
+/** Nội dung & asset URL landing Royal Wedding (một số ảnh CDN tham chiếu bản gốc). */
 
 export const MEHAPPY_ASSET = "https://mehappy.vn";
 
@@ -122,10 +122,10 @@ export const featureBlocks = [
     image: `${MEHAPPY_ASSET}/wedding-benefit.png`,
     title: "Quyền Lợi & Quà tặng",
     bullets: [
-      "Trình thiết kế thiệp cưới miễn phí, chuyên nghiệp",
-      "Quản lý kế hoạch cưới, ngân sách cưới miễn phí",
-      "Tạo thiệp cưới và sử dụng miễn phí",
-      "Gửi mời Miễn phí không giới hạn",
+      "Trình thiết kế thiệp cưới chuyên nghiệp",
+      "Quản lý kế hoạch cưới, ngân sách cưới",
+      "Gói Basic, Pro, VIP linh hoạt",
+      "Gửi mời online không giới hạn",
       "Đội ngũ hỗ trợ nhiệt tình tận tâm",
       "Chỉnh sửa thiệp không giới hạn",
       "Tùy chỉnh theo ý bạn dễ dàng",
@@ -140,7 +140,7 @@ export const stepsBlock = {
     {
       n: 1,
       title: "Bước 1: Đăng ký/Đăng nhập",
-      desc: "Tạo tài khoản miễn phí để bắt đầu thiết kế thiệp cưới của bạn.",
+      desc: "Đăng ký và chọn gói dịch vụ phù hợp để bắt đầu thiết kế thiệp cưới.",
     },
     {
       n: 2,
@@ -160,7 +160,7 @@ export const stepsBlock = {
   ],
 };
 
-/** Thiệp mẫu cộng đồng — `invitationUrl` là trang thiệp bên ngoài (meHappy / host thiệp), không route trong app này. */
+/** Thiệp mẫu cộng đồng — `invitationUrl` là trang thiệp bên ngoài, không route trong app này. */
 export type CoupleShowcaseItem = {
   id: string;
   image: string;
@@ -299,7 +299,7 @@ export const whyChooseItems = [
   },
   {
     title: "Tiết kiệm chi phí",
-    desc: "Hoàn toàn miễn phí, không phát sinh chi phí in ấn và gửi thiệp.",
+    desc: "Không phát sinh chi phí in ấn — gửi thiệp online qua link và QR.",
   },
   {
     title: "Quản lý khách mời",
@@ -322,7 +322,7 @@ export const faqMehappy = [
   },
   {
     q: "Tôi có thể thay đổi thiết kế hoặc thông tin thiệp cưới sau khi nó đã hoàn thành và đã bàn giao không ?",
-    a: "Dâu Rể hoàn toàn có thể thay đổi cho đến khi vừa ý kể các khi thiệp đã được bàn giao cho bạn, meWedding luôn mong muốn bạn sẽ có 1 đám cưới thật tuyệt vời và hoàn mỹ nhất, nên đừng ngần ngại liên hệ với meWedding để được hỗ trợ khi cần thiết nhé Dâu Rể. Đội ngũ sẽ luôn túc trực hỗ trợ Dâu Rể 24/7 mọi lúc mọi nơi!",
+    a: "Dâu Rể hoàn toàn có thể thay đổi cho đến khi vừa ý kể các khi thiệp đã được bàn giao cho bạn, Royal Wedding luôn mong muốn bạn sẽ có 1 đám cưới thật tuyệt vời và hoàn mỹ nhất, nên đừng ngần ngại liên hệ với Royal Wedding để được hỗ trợ khi cần thiết nhé Dâu Rể. Đội ngũ sẽ luôn túc trực hỗ trợ Dâu Rể 24/7 mọi lúc mọi nơi!",
   },
   {
     q: "Tự thiết kế thiệp này có dễ không, tôi không rành về máy tính",

@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { syncPayosOrderIfPaid } from "@/lib/orders/sync-payos-after-return";
 
 const bodySchema = z.object({
-  orderId: z.string().uuid().optional(),
+  orderId: z.string().uuid(),
 });
 
 /**
@@ -33,32 +33,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 
-  let targetOrderId: string | undefined = parsed.data.orderId;
+  const targetOrderId = parsed.data.orderId;
 
-  if (!targetOrderId) {
-    const { data: latest } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    targetOrderId = latest?.id;
-  } else {
-    const { data: owned } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("id", targetOrderId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!owned) {
-      return NextResponse.json({ error: "Không tìm thấy đơn" }, { status: 404 });
-    }
-  }
+  const { data: owned } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("id", targetOrderId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  if (!targetOrderId) {
-    return NextResponse.json({ ok: true, fulfilled: false });
+  if (!owned) {
+    return NextResponse.json({ error: "Không tìm thấy đơn" }, { status: 404 });
   }
 
   const admin = createServiceRoleClient();

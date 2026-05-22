@@ -18,3 +18,12 @@ export function isCardSubscriptionActive(
 export function tierRequiresPayment(planConfig: PlanConfigMap, plan: Plan): boolean {
   return (planConfig[plan]?.price ?? 0) > 0;
 }
+
+/** True if the user has at least one card with an active subscription (any card paid or free tier). */
+export function userHasActiveSubscription(
+  cards: CardLike[] | null | undefined,
+  planConfig: PlanConfigMap
+): boolean {
+  if (!cards?.length) return false;
+  return cards.some((c) => isCardSubscriptionActive(c, planConfig));
+}

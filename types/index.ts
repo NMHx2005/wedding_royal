@@ -51,6 +51,7 @@ export interface WeddingCard {
   remove_branding: boolean;
   custom_domain: string | null;
   view_count: number;
+  content_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -116,6 +117,7 @@ export interface TemplateRow {
   style_tags: string[] | null;
   is_active: boolean;
   sort_order: number;
+  content_json?: Record<string, unknown> | null;
   created_at: string;
 }
 

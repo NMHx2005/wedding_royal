@@ -80,7 +80,7 @@ insert into public.feature_catalog (key, name, description, price, thumbnail_url
   ('invite_personalized', 'Tạo và gửi thiệp mời online cho từng khách (cá nhân hoá)', 'Tạo thiệp mời online theo từng khách mời (có cá nhân hoá).', 108000, null, 200, true),
   ('event_add_to_calendar', 'Event - Thêm vào lịch', 'Thêm sự kiện vào lịch cho người xem.', 32400, null, 210, true),
   ('email_schedule', 'Hẹn giờ gửi email', 'Hẹn giờ gửi email nhắc sự kiện.', 54000, null, 220, true),
-  ('remove_branding', 'Loại bỏ phần tử branding', 'Gỡ bỏ branding meHappy/meWedding trên thiệp.', 108000, null, 230, true),
+  ('remove_branding', 'Loại bỏ phần tử branding', 'Gỡ bỏ branding Royal Wedding trên thiệp.', 108000, null, 230, true),
   ('custom_domain', 'Tích hợp tên miền riêng', 'Kết nối tên miền riêng cho thiệp.', 64800, null, 240, true),
   ('custom_qr', 'Tùy chỉnh mã QR', 'Tùy chỉnh mã QR hiển thị.', 32400, null, 250, true),
   ('html_code', 'HTML code', 'Tuỳ chỉnh HTML code theo nhu cầu.', 32400, null, 260, true)

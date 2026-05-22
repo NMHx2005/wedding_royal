@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { Plan, TemplateRow } from "@/types";
 
@@ -21,6 +22,7 @@ const EMPTY_FORM = {
 };
 
 export default function TemplatesAdminClient({ templates: initial }: Props) {
+  const confirmDialog = useConfirm();
   const [templates, setTemplates] = useState(initial);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TemplateRow | null>(null);
@@ -85,7 +87,13 @@ export default function TemplatesAdminClient({ templates: initial }: Props) {
   };
 
   const del = async (id: string) => {
-    if (!confirm(`Xóa template "${id}"?`)) return;
+    const ok = await confirmDialog({
+      title: "Xóa template",
+      message: `Xóa template "${id}"? Thao tác không thể hoàn tác.`,
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const supabase = createClient();
     const { error } = await supabase.from("templates").delete().eq("id", id);
     if (error) toast.error(error.message);

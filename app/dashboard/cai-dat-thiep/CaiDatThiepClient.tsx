@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { updateWeddingCard, applyTemplateToCard } from "@/app/actions/wedding-card";
+import { canOpenVisualEditor, getContentJsonKind } from "@/lib/editor/contentJsonKind";
 import { createClient } from "@/lib/supabase/client";
-import type { WeddingCard, CardStatus, ConfettiEffect } from "@/types";
+import type { WeddingCard, CardStatus, TemplateRow } from "@/types";
 
 type Props = {
   card: WeddingCard | null;
+  allCards?: WeddingCard[];
+  templates?: TemplateRow[];
 };
 
 type SectionKey = "cover" | "status" | "slug" | "content" | "design";
-
-const CONFETTI_OPTIONS: { value: ConfettiEffect; label: string }[] = [
-  { value: "none", label: "Không hiệu ứng" },
-  { value: "hearts", label: "Trái tim ❤️" },
-  { value: "snow", label: "Tuyết rơi ❄️" },
-  { value: "petals", label: "Cánh hoa 🌸" },
-];
 
 const STATUS_OPTIONS: { value: CardStatus; label: string; desc: string }[] = [
   { value: "draft", label: "Nháp", desc: "Chỉ bạn thấy, khách chưa truy cập được" },
@@ -67,10 +66,114 @@ function SectionCard({
   );
 }
 
-export default function CaiDatThiepClient({ card: initialCard }: Props) {
+// ─── Template Picker Modal ────────────────────────────────────────────────────
+function TemplatePicker({
+  cardId,
+  templates,
+  onClose,
+  onApplied,
+}: {
+  cardId: string;
+  templates: TemplateRow[];
+  onClose: () => void;
+  onApplied: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [applying, setApplying] = useState<string | null>(null);
+
+  const handleApply = (templateId: string) => {
+    setApplying(templateId);
+    startTransition(async () => {
+      const result = await applyTemplateToCard(cardId, templateId);
+      if (result.error) {
+        toast.error(result.error);
+        setApplying(null);
+      } else {
+        toast.success("Đã áp dụng mẫu thiệp!");
+        onApplied();
+        onClose();
+      }
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Chọn mẫu thiệp</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Chọn mẫu để bắt đầu chỉnh sửa</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6">
+          {templates.length === 0 ? (
+            <p className="text-center text-gray-400 py-8">Chưa có mẫu thiệp nào được kích hoạt</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => handleApply(t.id)}
+                  disabled={isPending}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all text-left disabled:opacity-60"
+                >
+                  <div className="relative aspect-[3/4] bg-gray-100">
+                    {t.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.thumbnail_url} alt={t.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-300 text-sm">
+                        Xem trước
+                      </div>
+                    )}
+                    {applying === t.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                        <svg className="w-8 h-8 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-gray-800 group-hover:text-indigo-700">{t.name}</p>
+                    <span className="text-xs text-gray-400 uppercase">{t.plan_required}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Huỷ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function CaiDatThiepClient({
+  card: initialCard,
+  allCards = [],
+  templates = [],
+}: Props) {
   const supabase = createClient();
+  const router = useRouter();
   const [card, setCard] = useState<WeddingCard | null>(initialCard);
   const [openSection, setOpenSection] = useState<SectionKey>("cover");
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const toggleSection = (key: SectionKey) => {
     setOpenSection((prev) => (prev === key ? ("" as SectionKey) : key));
@@ -99,12 +202,9 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
       .from("wedding-photos")
       .getPublicUrl(path);
     const publicUrl = urlData.publicUrl;
-    const { error: updateErr } = await supabase
-      .from("wedding_cards")
-      .update({ cover_image_url: publicUrl })
-      .eq("id", card.id);
+    const { error: updateErr } = await updateWeddingCard(card.id, { cover_image_url: publicUrl });
     if (updateErr) {
-      setCoverMsg(`Lỗi cập nhật: ${updateErr.message}`);
+      setCoverMsg(`Lỗi cập nhật: ${updateErr}`);
     } else {
       setCard((prev) => (prev ? { ...prev, cover_image_url: publicUrl } : prev));
       setCoverMsg("Đã cập nhật ảnh bìa!");
@@ -123,13 +223,10 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
     if (!card) return;
     setStatusSaving(true);
     setStatusMsg("");
-    const { error } = await supabase
-      .from("wedding_cards")
-      .update({ status: statusValue })
-      .eq("id", card.id);
+    const { error } = await updateWeddingCard(card.id, { status: statusValue });
     setStatusSaving(false);
     if (error) {
-      setStatusMsg(`Lỗi: ${error.message}`);
+      setStatusMsg(`Lỗi: ${error}`);
     } else {
       setCard((prev) => (prev ? { ...prev, status: statusValue } : prev));
       setStatusMsg("Đã lưu chế độ hiển thị!");
@@ -155,15 +252,13 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
       return;
     }
     setSlugSaving(true);
-    const { error } = await supabase
-      .from("wedding_cards")
-      .update({ slug: slugValue })
-      .eq("id", card.id);
+    const { error } = await updateWeddingCard(card.id, { slug: slugValue });
     setSlugSaving(false);
     if (error) {
-      setSlugError(error.message.includes("unique")
-        ? "Slug này đã được dùng, vui lòng chọn slug khác"
-        : error.message
+      setSlugError(
+        error.includes("unique") || error.includes("duplicate")
+          ? "Slug này đã được dùng, vui lòng chọn slug khác"
+          : error
       );
     } else {
       setCard((prev) => (prev ? { ...prev, slug: slugValue } : prev));
@@ -180,9 +275,6 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
 
   // ── Content toggles ──────────────────────────────────────────────────────
   const [showGiftBox, setShowGiftBox] = useState(initialCard?.show_gift_box ?? false);
-  const [confettiValue, setConfettiValue] = useState<ConfettiEffect>(
-    initialCard?.confetti_effect ?? "none"
-  );
   const [contentSaving, setContentSaving] = useState(false);
   const [contentMsg, setContentMsg] = useState("");
 
@@ -190,18 +282,15 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
     if (!card) return;
     setContentSaving(true);
     setContentMsg("");
-    const { error } = await supabase
-      .from("wedding_cards")
-      .update({ show_gift_box: showGiftBox, confetti_effect: confettiValue })
-      .eq("id", card.id);
+    const { error } = await updateWeddingCard(card.id, {
+      show_gift_box: showGiftBox,
+    });
     setContentSaving(false);
     if (error) {
-      setContentMsg(`Lỗi: ${error.message}`);
+      setContentMsg(`Lỗi: ${error}`);
     } else {
       setCard((prev) =>
-        prev
-          ? { ...prev, show_gift_box: showGiftBox, confetti_effect: confettiValue }
-          : prev
+        prev ? { ...prev, show_gift_box: showGiftBox } : prev
       );
       setContentMsg("Đã lưu nội dung hiển thị!");
     }
@@ -225,14 +314,87 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
     );
   }
 
+  const handleOpenEditor = () => {
+    if (!card) return;
+    if (canOpenVisualEditor(card.content_json)) {
+      router.push(`/dashboard/editor/${card.id}`);
+      return;
+    }
+    const qs =
+      getContentJsonKind(card.content_json) === "raw-html"
+        ? "?needTemplate=1&source=html"
+        : "?needTemplate=1";
+    router.push(`/dashboard/${card.id}/thiet-lap${qs}`);
+  };
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-800">Cài đặt thiệp cưới</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Quản lý hiển thị và cấu hình thiệp cưới của bạn
-        </p>
-      </div>
+    <>
+      {showTemplatePicker && card && (
+        <TemplatePicker
+          cardId={card.id}
+          templates={templates}
+          onClose={() => setShowTemplatePicker(false)}
+          onApplied={() => {
+            router.push(`/dashboard/editor/${card.id}`);
+          }}
+        />
+      )}
+
+      <div className="mx-auto max-w-2xl space-y-4">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-neutral-800">Cài đặt thiệp cưới</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Quản lý hiển thị và cấu hình thiệp cưới của bạn
+          </p>
+          {allCards.length > 1 && (
+            <div className="mt-4">
+              <label htmlFor="card-select" className="mb-1.5 block text-xs font-medium text-neutral-500">
+                Chọn thiệp
+              </label>
+              <select
+                id="card-select"
+                value={card.id}
+                onChange={(e) => router.push(`/dashboard/${e.target.value}/cai-dat-thiep`)}
+                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100"
+              >
+                {allCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.groom_name} & {c.bride_name} — /thiep/{c.slug}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* ── Visual Editor CTA ── */}
+        {card && card.paid_at && (
+          <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-indigo-800">
+                🎨 Trình chỉnh sửa thiệp
+              </h3>
+              <p className="text-sm text-indigo-600 mt-0.5">
+                {canOpenVisualEditor(card.content_json)
+                  ? "Thiệp Craft — nhấn để tiếp tục chỉnh sửa kéo-thả."
+                  : getContentJsonKind(card.content_json) === "raw-html"
+                    ? "Thiệp mẫu HTML — chọn mẫu Craft để dùng trình chỉnh sửa trực quan."
+                    : "Chọn mẫu thiệp và tùy chỉnh nội dung, hình ảnh, màu sắc theo ý muốn."}
+              </p>
+            </div>
+            <button
+              onClick={handleOpenEditor}
+              className="shrink-0 flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              {canOpenVisualEditor(card.content_json)
+                ? "Mở trình chỉnh sửa"
+                : "Chọn mẫu Craft & chỉnh sửa"}
+            </button>
+          </div>
+        )}
 
       {/* 1. Ảnh bìa */}
       <SectionCard
@@ -429,26 +591,13 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
             </button>
           </div>
 
-          {/* Confetti selector */}
-          <div>
-            <p className="mb-2 text-sm font-medium text-neutral-800">Hiệu ứng confetti</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {CONFETTI_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setConfettiValue(opt.value)}
-                  className={`rounded-xl border px-3 py-2.5 text-sm transition ${
-                    confettiValue === opt.value
-                      ? "border-rose-400 bg-rose-50 font-semibold text-rose-600"
-                      : "border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+            Nhạc nền và hiệu ứng confetti: chỉnh trong{" "}
+            <Link href={card ? `/dashboard/${card.id}/thiet-lap` : "/dashboard"} className="font-medium text-rose-600 hover:underline">
+              Thiết lập → tab Nhạc &amp; hiệu ứng
+              </Link>
+            .
+          </p>
 
           <div className="flex items-center gap-3">
             <button
@@ -469,25 +618,26 @@ export default function CaiDatThiepClient({ card: initialCard }: Props) {
       </SectionCard>
 
       {/* 5. Thiết lập giao diện */}
-      <SectionCard
-        title="Thiết lập giao diện"
-        description="Chọn template, màu sắc và font chữ"
-        sectionKey="design"
-        open={openSection === "design"}
-        onToggle={toggleSection}
-      >
-        <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-neutral-600">
-            Tùy chỉnh giao diện thiệp cưới chi tiết trong trang Thiết lập.
-          </p>
-          <Link
-            href="/dashboard/thiet-lap"
-            className="rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-rose-600"
-          >
-            Đến trang Thiết lập giao diện →
-          </Link>
-        </div>
-      </SectionCard>
-    </div>
+        <SectionCard
+          title="Thiết lập giao diện"
+          description="Chọn template, màu sắc và font chữ"
+          sectionKey="design"
+          open={openSection === "design"}
+          onToggle={toggleSection}
+        >
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-neutral-600">
+              Tùy chỉnh giao diện thiệp cưới chi tiết trong trang Thiết lập.
+            </p>
+            <Link
+              href={card ? `/dashboard/${card.id}/thiet-lap` : "/dashboard"}
+              className="rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-rose-600"
+            >
+              Đến trang Thiết lập giao diện →
+            </Link>
+          </div>
+        </SectionCard>
+      </div>
+    </>
   );
 }

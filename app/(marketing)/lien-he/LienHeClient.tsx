@@ -16,31 +16,44 @@ export function LienHeClient({ contact, social }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [subject, setSubject] = useState("Tư vấn thiệp cưới meWedding");
+  const [subject, setSubject] = useState("Tư vấn thiệp cưới Royal Wedding");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !message.trim()) {
       toast.error("Vui lòng nhập họ tên và nội dung liên hệ");
       return;
     }
     setSending(true);
-    const body = [
-      `Họ tên: ${name.trim()}`,
-      phone.trim() ? `SĐT: ${phone.trim()}` : "",
-      email.trim() ? `Email: ${email.trim()}` : "",
-      "",
-      message.trim(),
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const mailto = `mailto:${contact.email}?subject=${encodeURIComponent(subject.trim() || "Liên hệ meWedding")}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
-    toast.success("Đang mở ứng dụng email để gửi tin nhắn…");
-    setTimeout(() => setSending(false), 800);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
+          subject: subject.trim() || undefined,
+          message: message.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(data.error ?? "Không gửi được tin nhắn. Vui lòng thử lại.");
+        return;
+      }
+      toast.success("Đã gửi tin nhắn! Chúng tôi sẽ phản hồi sớm nhất.");
+      setName("");
+      setPhone("");
+      setEmail("");
+      setMessage("");
+    } catch {
+      toast.error("Lỗi kết nối. Vui lòng thử lại sau.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const socialLinks = [
@@ -68,7 +81,7 @@ export function LienHeClient({ contact, social }: Props) {
             Chúng tôi luôn sẵn sàng hỗ trợ bạn
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-600 sm:text-base">
-            Gửi câu hỏi về thiệp cưới, gói dịch vụ hoặc hỗ trợ kỹ thuật — đội ngũ meWedding phản hồi nhanh qua email và các kênh mạng xã hội.
+            Gửi câu hỏi về thiệp cưới, gói dịch vụ hoặc hỗ trợ kỹ thuật — đội ngũ Royal Wedding phản hồi nhanh qua email và các kênh mạng xã hội.
           </p>
         </div>
       </section>
@@ -81,7 +94,7 @@ export function LienHeClient({ contact, social }: Props) {
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
               <h2 className="text-lg font-bold text-neutral-900">Gửi tin nhắn cho chúng tôi</h2>
               <p className="mt-1 text-sm text-neutral-600">
-                Điền form bên dưới — hệ thống sẽ mở email để bạn gửi trực tiếp tới meWedding.
+                Điền form bên dưới — tin nhắn được lưu và đội ngũ Royal Wedding sẽ phản hồi qua email hoặc điện thoại.
               </p>
               <form onSubmit={onSubmit} className="mt-6 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -126,7 +139,7 @@ export function LienHeClient({ contact, social }: Props) {
                     onChange={(e) => setSubject(e.target.value)}
                     className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none ring-rose-200 transition focus:border-rose-300 focus:ring-2"
                   >
-                    <option>Tư vấn thiệp cưới meWedding</option>
+                    <option>Tư vấn thiệp cưới Royal Wedding</option>
                     <option>Hỗ trợ kỹ thuật / sửa thiệp</option>
                     <option>Thanh toán và nâng cấp gói</option>
                     <option>Hợp tác đại lý / nhà sáng tạo</option>
@@ -161,7 +174,7 @@ export function LienHeClient({ contact, social }: Props) {
           {/* Info sidebar */}
           <div className="space-y-5 lg:col-span-2">
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-rose-600">meWedding</h2>
+              <h2 className="text-lg font-bold text-rose-600">Royal Wedding</h2>
               <p className="mt-1 text-sm text-neutral-600">Gửi hạnh phúc — Kết nối yêu thương</p>
               <ul className="mt-4 space-y-4 text-sm text-neutral-700">
                 {contact.email && (
@@ -248,12 +261,12 @@ export function LienHeClient({ contact, social }: Props) {
                     </Link>{" "}
                     hoặc{" "}
                     <Link href="/register" className="font-medium text-rose-600 hover:underline">
-                      tạo thiệp miễn phí
+                      tạo thiệp online
                     </Link>
                     .
                   </p>
                   <a
-                    href={`mailto:${contact.email}?subject=${encodeURIComponent("Hỗ trợ gấp meWedding")}`}
+                    href={`mailto:${contact.email}?subject=${encodeURIComponent("Hỗ trợ gấp Royal Wedding")}`}
                     className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-rose-600 hover:text-rose-700"
                   >
                     <Mail className="h-4 w-4" aria-hidden />

@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
-import type { Plan } from "@/types";
 
 export const metadata = {
-  title: "Wedding Manager | meWedding",
+  title: "Wedding Manager | Royal Wedding",
 };
 
+/** Auth shell only — chrome is applied in (home) or [cardId] layouts to avoid nested sidebars. */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
@@ -16,29 +15,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const { data: card } = await supabase
-    .from("wedding_cards")
-    .select("id, slug, plan")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  return (
-    <DashboardChrome
-      userEmail={user.email ?? ""}
-      fullName={profile?.full_name ?? null}
-      cardId={card?.id ?? null}
-      plan={(card?.plan as Plan) ?? "basic"}
-      slug={card?.slug ?? null}
-    >
-      {children}
-    </DashboardChrome>
-  );
+  return <>{children}</>;
 }

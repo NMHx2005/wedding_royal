@@ -37,7 +37,7 @@ const COMPARE_ROWS: { label: string; basic: Cell; pro: Cell; vip: Cell }[] = [
   { label: "Số thiệp có thể tạo", basic: "1", pro: "2", vip: "3" },
   { label: "Mã QR in thiệp giấy", basic: "yes", pro: "yes", vip: "yes" },
   { label: "Đếm ngược & Google Maps", basic: "yes", pro: "yes", vip: "yes" },
-  { label: "RSVP & quản lý khách mời", basic: "no", pro: "yes", vip: "yes" },
+  { label: "RSVP & quản lý khách mời", basic: "yes", pro: "yes", vip: "yes" },
   { label: "Giao diện VIP độc quyền", basic: "no", pro: "no", vip: "yes" },
   { label: "Tên miền riêng (Custom domain)", basic: "no", pro: "no", vip: "yes" },
 ];
@@ -426,7 +426,7 @@ export function BangGiaClient({ faqItems = faqMehappy, planPrices }: BangGiaProp
               <tbody>
                 <tr className="border-b border-neutral-100 bg-rose-50/30">
                   <td className="sticky left-0 z-10 bg-rose-50 px-3 py-2.5 text-xs text-neutral-700 md:text-sm">
-                    meHappy thiết kế và cài đặt thiệp từ A–Z
+                    Royal Wedding thiết kế và cài đặt thiệp từ A–Z
                   </td>
                   <td className="px-3 py-2.5 text-center">{comparePlus ? <CellIcon v="yes" /> : <CellIcon v="no" />}</td>
                   <td className="px-3 py-2.5 text-center">{comparePlus ? <CellIcon v="yes" /> : <CellIcon v="no" />}</td>
@@ -468,7 +468,7 @@ export function BangGiaClient({ faqItems = faqMehappy, planPrices }: BangGiaProp
           <div className="md:flex md:items-end md:justify-between md:gap-8">
             <div className="max-w-xl">
               <p className="text-lg font-bold text-neutral-900 sm:text-xl">
-                Trở thành Đối tác hoặc Nhà thiết kế của meWedding
+                Trở thành Đối tác hoặc Nhà thiết kế của Royal Wedding
               </p>
               <p className="mt-2 text-sm leading-relaxed text-neutral-600">
                 Tham gia cộng đồng sáng tạo và kiếm tiền bằng cách chia sẻ thiết kế hoặc giới thiệu khách hàng đến nền tảng.
@@ -476,13 +476,13 @@ export function BangGiaClient({ faqItems = faqMehappy, planPrices }: BangGiaProp
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center md:mt-0 md:shrink-0">
               <a
-                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Đại lý meWedding"
+                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Đại lý Royal Wedding"
                 className="inline-flex items-center justify-center rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-purple-700"
               >
                 Đăng ký Đại lý
               </a>
               <a
-                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Nhà sáng tạo meWedding"
+                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Nhà sáng tạo Royal Wedding"
                 className="inline-flex items-center justify-center rounded-xl bg-rose-400 px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500"
               >
                 Đăng ký Nhà sáng tạo
@@ -499,7 +499,7 @@ export function BangGiaClient({ faqItems = faqMehappy, planPrices }: BangGiaProp
             <h2 className="text-2xl font-bold text-neutral-900">Những câu hỏi thường gặp</h2>
           </div>
           <p className="mx-auto mt-2 max-w-lg text-center text-sm text-neutral-600">
-            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng MeHappy.
+            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng Royal Wedding.
           </p>
           <div className="mt-8 space-y-2">
             {faqItems.map((item, i) => (

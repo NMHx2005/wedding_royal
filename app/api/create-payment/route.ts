@@ -3,6 +3,9 @@ import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { createPaymentSchema } from "@/lib/validations/api";
 import { generatePayOSOrderCode, getPayOS, payosPaymentDescription } from "@/lib/payos";
 import { getPlanPrices } from "@/lib/plans/get-plan-prices";
+import { getPlanConfig } from "@/lib/plans/plan-config";
+import { validatePlanPurchase } from "@/lib/plans/plan-access";
+import type { Plan } from "@/types";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -25,22 +28,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const planKey = parsed.data.plan;
-  const planPrices = await getPlanPrices();
+  const planKey = parsed.data.plan as Plan;
+  const [planPrices, planConfig] = await Promise.all([getPlanPrices(), getPlanConfig()]);
   const planInfo = planPrices[planKey];
-
-  if (planInfo.price <= 0) {
-    return NextResponse.json({ error: "Gói này đang miễn phí — không cần thanh toán" }, { status: 400 });
-  }
 
   const { data: card, error: cardErr } = await supabase
     .from("wedding_cards")
-    .select("id, user_id")
+    .select("id, user_id, plan, paid_at")
     .eq("id", parsed.data.cardId)
     .maybeSingle();
 
   if (cardErr || !card || card.user_id !== user.id) {
     return NextResponse.json({ error: "Không tìm thấy thiệp" }, { status: 404 });
+  }
+
+  const purchaseCheck = validatePlanPurchase(
+    { plan: card.plan as Plan, paid_at: card.paid_at },
+    planKey,
+    planConfig
+  );
+  if (!purchaseCheck.ok) {
+    return NextResponse.json({ error: purchaseCheck.error }, { status: 400 });
+  }
+
+  if (planInfo.price <= 0) {
+    return NextResponse.json({ error: "Gói này đang miễn phí — liên hệ hỗ trợ để kích hoạt" }, { status: 400 });
   }
 
   const orderCode = generatePayOSOrderCode();

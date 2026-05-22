@@ -343,8 +343,8 @@ on conflict do nothing;
 -- Website settings defaults
 insert into public.website_settings (key, value)
 values
-  ('contact', '{"email":"hello@mewedding.vn","phone":"0282 2222 886","address":"Tầng 5, 77 Nguyễn Huệ, Q.1, TP.HCM","tax_url":"","working_hours":"8:00 - 22:00, Thứ 2 - Chủ Nhật"}'::jsonb),
-  ('social', '{"facebook":"https://facebook.com/mewedding","tiktok":"https://tiktok.com/@mewedding","youtube":"https://youtube.com/@mewedding","zalo":"https://zalo.me/mewedding","instagram":""}'::jsonb),
-  ('seo', '{"title":"meWedding — Thiệp cưới online đẹp nhất Việt Nam","description":"Tạo thiệp cưới online miễn phí, gửi link mời khách, quản lý RSVP và lời chúc. Hơn 1000 cặp đôi tin dùng.","og_image":""}'::jsonb),
-  ('faq', '[{"q":"meWedding có miễn phí không?","a":"Gói Basic hoàn toàn miễn phí với đầy đủ tính năng cơ bản. Gói Pro và VIP có thêm các tính năng cao cấp."},{"q":"Thiệp cưới có hoạt động trên điện thoại không?","a":"Có, thiệp được tối ưu hoàn toàn cho cả điện thoại, máy tính bảng và desktop."},{"q":"Tôi có thể tùy chỉnh thiệp theo ý muốn không?","a":"Hoàn toàn có thể. Bạn có thể thay đổi template, màu sắc, font chữ, thêm nhạc nền và nhiều hơn nữa."},{"q":"Dữ liệu của tôi có an toàn không?","a":"Dữ liệu được lưu trữ an toàn trên hệ thống cloud, mã hóa SSL và backup hàng ngày."}]'::jsonb)
+  ('contact', '{"email":"hello@royalwedding.vn","phone":"0282 2222 886","address":"Tầng 5, 77 Nguyễn Huệ, Q.1, TP.HCM","tax_url":"","working_hours":"8:00 - 22:00, Thứ 2 - Chủ Nhật"}'::jsonb),
+  ('social', '{"facebook":"https://facebook.com/royalwedding","tiktok":"https://tiktok.com/@royalwedding","youtube":"https://youtube.com/@royalwedding","zalo":"https://zalo.me/royalwedding","instagram":""}'::jsonb),
+  ('seo', '{"title":"Royal Wedding — Thiệp cưới online đẹp nhất Việt Nam","description":"Tạo thiệp cưới online, gửi link mời khách, quản lý RSVP và lời chúc. Thanh toán PayOS.","og_image":""}'::jsonb),
+  ('faq', '[{"q":"Royal Wedding có gói miễn phí không?","a":"Giá từng gói xem Bảng giá. Sau đăng ký, chọn gói và thanh toán PayOS để kích hoạt dashboard."},{"q":"Thiệp cưới có hoạt động trên điện thoại không?","a":"Có, thiệp tối ưu cho điện thoại, máy tính bảng và desktop."},{"q":"Tôi có thể tùy chỉnh thiệp theo ý muốn không?","a":"Có — template, màu, font, nhạc nền tùy gói."},{"q":"Dữ liệu có an toàn không?","a":"Lưu trữ cloud, truyền tải SSL."}]'::jsonb)
 on conflict (key) do nothing;

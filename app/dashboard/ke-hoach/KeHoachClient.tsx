@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import type { WeddingPlan, PlanTaskGroup, PlanTask, TaskStatus } from "@/types";
 
 type GroupWithTasks = PlanTaskGroup & { tasks: PlanTask[] };
@@ -28,6 +29,7 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
 };
 
 export default function KeHoachClient({ cardId }: Props) {
+  const confirmDialog = useConfirm();
   const supabase = createClient();
 
   const [plans, setPlans] = useState<WeddingPlan[]>([]);
@@ -223,7 +225,13 @@ export default function KeHoachClient({ cardId }: Props) {
   };
 
   const deletePlan = async (planId: string) => {
-    if (!confirm("Xóa kế hoạch này và tất cả nhiệm vụ?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa kế hoạch",
+      message: "Xóa kế hoạch này và tất cả nhiệm vụ? Thao tác không thể hoàn tác.",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("wedding_plans").delete().eq("id", planId);
     if (error) { toast.error(error.message); return; }
     const next = plans.filter((p) => p.id !== planId);
@@ -250,7 +258,13 @@ export default function KeHoachClient({ cardId }: Props) {
   };
 
   const deleteGroup = async (groupId: string) => {
-    if (!confirm("Xóa nhóm và tất cả nhiệm vụ trong nhóm?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa nhóm",
+      message: "Xóa nhóm và tất cả nhiệm vụ trong nhóm? Thao tác không thể hoàn tác.",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("plan_task_groups").delete().eq("id", groupId);
     if (error) { toast.error(error.message); return; }
     setGroups((prev) => prev.filter((g) => g.id !== groupId));

@@ -8,7 +8,7 @@ type Props = {
 };
 
 const COLORS: Record<string, string[]> = {
-  hearts: ["#e879a9", "#f4c2c2", "#b5606e"],
+  hearts: ["#5d7296", "#8da0be", "#152238"],
   snow: ["#ffffff", "#e0f2fe", "#bae6fd"],
   petals: ["#fbcfe8", "#fce7f3", "#fda4af"],
 };

@@ -12,12 +12,16 @@ import { AuthMehappyShell, GoogleIcon } from "@/components/auth/AuthMehappyShell
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { FadeIn } from "@/components/motion/gentle";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { getAuthErrorMessage, isEmailNotConfirmed } from "@/lib/auth/auth-errors";
 
 export function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeRedirectPath(searchParams.get("next"));
   const [showPassword, setShowPassword] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   const {
     register,
@@ -35,12 +39,33 @@ export function LoginClient() {
       password: values.password,
     });
     if (error) {
-      toast.error(error.message);
+      if (isEmailNotConfirmed(error)) {
+        setUnconfirmedEmail(values.email.trim());
+      }
+      toast.error(getAuthErrorMessage(error));
       return;
     }
+    setUnconfirmedEmail(null);
     toast.success("Đăng nhập thành công");
     router.push(next);
     router.refresh();
+  };
+
+  const resendConfirmation = async () => {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    const supabase = createClient();
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: unconfirmedEmail,
+      options: {
+        emailRedirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent(next)}` : undefined,
+      },
+    });
+    setResending(false);
+    if (error) toast.error(getAuthErrorMessage(error));
+    else toast.success("Đã gửi lại email xác nhận");
   };
 
   const google = async () => {
@@ -70,6 +95,23 @@ export function LoginClient() {
           <p className="mt-2 text-center text-sm text-neutral-600">
             Chào mừng trở lại! Đăng nhập để tiếp tục.
           </p>
+
+          {unconfirmedEmail && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-medium">Email chưa được xác nhận</p>
+              <p className="mt-1 text-amber-800">
+                Kiểm tra hộp thư <span className="font-semibold">{unconfirmedEmail}</span> (cả Spam) và bấm link xác nhận.
+              </p>
+              <button
+                type="button"
+                onClick={() => void resendConfirmation()}
+                disabled={resending}
+                className="mt-3 text-sm font-semibold text-amber-900 underline hover:text-amber-950 disabled:opacity-60"
+              >
+                {resending ? "Đang gửi lại…" : "Gửi lại email xác nhận"}
+              </button>
+            </div>
+          )}
 
           <div className="mt-6">
             <button

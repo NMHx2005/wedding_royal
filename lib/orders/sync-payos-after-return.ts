@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPayOS } from "@/lib/payos";
+import { payosAmountMatchesOrder } from "@/lib/orders/verify-payos-amount";
 import { fulfillPaidOrder } from "./fulfill-order";
 
 /** After user returns from PayOS checkout, confirm status via API and fulfill if PAID. */
@@ -9,7 +10,7 @@ export async function syncPayosOrderIfPaid(
 ): Promise<{ ok: boolean; fulfilled: boolean; error?: string }> {
   const { data: order, error: findErr } = await supabaseAdmin
     .from("orders")
-    .select("id, status, payos_order_id")
+    .select("id, status, payos_order_id, amount")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -34,7 +35,16 @@ export async function syncPayosOrderIfPaid(
     const payos = getPayOS();
     const link = await payos.paymentRequests.get(orderCode);
     if (link.status === "PAID") {
-      const result = await fulfillPaidOrder(supabaseAdmin, order.id, order.payos_order_id);
+      const paidAmount = Number(link.amount);
+      if (!payosAmountMatchesOrder(Number(order.amount), paidAmount)) {
+        return { ok: false, fulfilled: false, error: "Số tiền PayOS không khớp đơn hàng" };
+      }
+      const result = await fulfillPaidOrder(
+        supabaseAdmin,
+        order.id,
+        order.payos_order_id,
+        paidAmount
+      );
       if (!result.ok) {
         return { ok: false, fulfilled: false, error: result.error };
       }

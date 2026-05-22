@@ -1,21 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import CaiDatThiepClient from "./CaiDatThiepClient";
 
-export const metadata = { title: "Cài đặt thiệp cưới" };
-
-export default async function CaiDatThiepPage() {
+export default async function CaiDatThiepPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cardId?: string }>;
+}) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: card } = await supabase
-    .from("wedding_cards")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { cardId } = await searchParams;
 
-  return <CaiDatThiepClient card={card ?? null} />;
+  let q = supabase.from("wedding_cards").select("id").eq("user_id", user.id);
+  if (cardId) q = q.eq("id", cardId);
+  const { data: card } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+  if (!card) redirect("/dashboard");
+  redirect(`/dashboard/${card.id}/cai-dat-thiep`);
 }

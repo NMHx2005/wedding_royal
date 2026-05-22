@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getPlanConfig } from "@/lib/plans/plan-config";
+import { planHasFeature } from "@/lib/plans/plan-config-shared";
 import { createPublicSupabase } from "@/lib/supabase/public";
 import { wishSchema } from "@/lib/validations/api";
+import type { Plan } from "@/types";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
   const supabase = createPublicSupabase();
   const { data: card, error: cardErr } = await supabase
     .from("wedding_cards")
-    .select("id, status")
+    .select("id, status, plan")
     .eq("id", parsed.data.cardId)
     .maybeSingle();
 
@@ -54,13 +57,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Thiệp không khả dụng" }, { status: 400 });
   }
 
+  const planConfig = await getPlanConfig();
+  const autoApprove = planHasFeature(planConfig, card.plan as Plan, "auto_approve_wishes");
+
   const { data: wish, error } = await supabase
     .from("wishes")
     .insert({
       card_id: parsed.data.cardId,
       guest_name: parsed.data.guestName,
       message: parsed.data.message,
-      is_approved: true,
+      is_approved: autoApprove,
     })
     .select("id, guest_name, message, created_at")
     .single();

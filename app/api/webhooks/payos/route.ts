@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   const { data: order, error: orderFindErr } = await supabase
     .from("orders")
-    .select("id, status")
+    .select("id, status, amount")
     .eq("payos_order_id", orderCodeStr)
     .maybeSingle();
 
@@ -61,7 +61,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  await fulfillPaidOrder(supabase, order.id, orderCodeStr);
+  const payosAmount = Number(payload.data?.amount);
+  await fulfillPaidOrder(
+    supabase,
+    order.id,
+    orderCodeStr,
+    Number.isFinite(payosAmount) && payosAmount > 0 ? payosAmount : undefined
+  );
 
   return NextResponse.json({ ok: true });
 }

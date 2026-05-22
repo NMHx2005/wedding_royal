@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, LayoutTemplate } from "lucide-react";
+import { AdminFilterSelect, AdminListControls } from "@/components/admin/AdminListControls";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/lib/admin/useAdminPagination";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { TemplateRow, Plan } from "@/types";
 
@@ -211,6 +216,7 @@ export default function TemplatesClient({
 }: {
   initialTemplates: TemplateRow[];
 }) {
+  const confirmDialog = useConfirm();
   const [templates, setTemplates] = useState(initialTemplates);
   const [modal, setModal] = useState<{
     open: boolean;
@@ -218,6 +224,37 @@ export default function TemplatesClient({
   }>({ open: false, data: null });
   const [pending, startTransition] = useTransition();
   const supabase = createClient();
+  const [q, setQ] = useState("");
+  const [planFilter, setPlanFilter] = useState<"all" | Plan>("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return templates.filter((t) => {
+      if (planFilter !== "all" && t.plan_required !== planFilter) return false;
+      if (activeFilter === "active" && !t.is_active) return false;
+      if (activeFilter === "inactive" && t.is_active) return false;
+      if (!needle) return true;
+      return (
+        t.id.toLowerCase().includes(needle) ||
+        t.name.toLowerCase().includes(needle) ||
+        (t.description ?? "").toLowerCase().includes(needle) ||
+        (t.style_tags ?? []).some((tag) => tag.toLowerCase().includes(needle))
+      );
+    });
+  }, [templates, q, planFilter, activeFilter]);
+
+  const {
+    paginated,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    filteredCount,
+  } = useAdminPagination(filtered, [q, planFilter, activeFilter]);
 
   const handleToggleActive = (id: string, current: boolean) => {
     startTransition(async () => {
@@ -235,8 +272,14 @@ export default function TemplatesClient({
     });
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Xóa template "${name}"?`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirmDialog({
+      title: "Xóa template",
+      message: `Xóa template "${name}"? Thao tác không thể hoàn tác.`,
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     startTransition(async () => {
       const { error } = await supabase.from("templates").delete().eq("id", id);
       if (error) {
@@ -313,18 +356,38 @@ export default function TemplatesClient({
         />
       )}
 
-      <div className="flex justify-end mb-4">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <AdminListControls
+          query={q}
+          onQueryChange={setQ}
+          placeholder="Tìm theo tên, ID, tag..."
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          className="flex-1 shadow-none border-0 p-0"
+        >
+          <AdminFilterSelect value={planFilter} onChange={(v) => setPlanFilter(v as "all" | Plan)}>
+            <option value="all">Tất cả plan</option>
+            <option value="basic">basic</option>
+            <option value="pro">pro</option>
+            <option value="vip">vip</option>
+          </AdminFilterSelect>
+          <AdminFilterSelect value={activeFilter} onChange={(v) => setActiveFilter(v as "all" | "active" | "inactive")}>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang hiện</option>
+            <option value="inactive">Đã ẩn</option>
+          </AdminFilterSelect>
+        </AdminListControls>
         <button
           onClick={() => setModal({ open: true, data: null })}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
           <Plus size={16} />
           Thêm template
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {templates.map((t) => (
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {paginated.map((t) => (
           <div
             key={t.id}
             className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-opacity ${
@@ -393,11 +456,18 @@ export default function TemplatesClient({
                       <ToggleLeft size={18} />
                     )}
                   </button>
+                  <Link
+                    href={`/admin/templates/${t.id}/editor`}
+                    className="p-1.5 rounded-md hover:bg-indigo-50 text-indigo-500 transition-colors"
+                    title="Mở trình chỉnh sửa"
+                  >
+                    <LayoutTemplate size={15} />
+                  </Link>
                   <button
                     disabled={pending}
                     onClick={() => openEdit(t)}
                     className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 transition-colors disabled:opacity-50"
-                    title="Sửa"
+                    title="Sửa thông tin"
                   >
                     <Pencil size={15} />
                   </button>
@@ -416,9 +486,25 @@ export default function TemplatesClient({
         ))}
       </div>
 
-      {templates.length === 0 && (
+      {filtered.length === 0 && (
         <div className="py-20 text-center text-gray-400">
-          Chưa có template nào. Nhấn &ldquo;Thêm template&rdquo; để bắt đầu.
+          {templates.length === 0
+            ? "Chưa có template nào. Nhấn \"Thêm template\" để bắt đầu."
+            : "Không có kết quả phù hợp bộ lọc."}
+        </div>
+      )}
+
+      {filtered.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            filteredCount={filteredCount}
+            totalCount={templates.length}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </>

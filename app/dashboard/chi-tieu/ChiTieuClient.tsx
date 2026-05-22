@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import type { BudgetPlan, BudgetCategory } from "@/types";
 
 type Props = { cardId: string | null };
@@ -13,6 +14,7 @@ const vnd = (n: number) =>
 type EditingCategory = Omit<BudgetCategory, "created_at"> & { isNew?: boolean };
 
 export default function ChiTieuClient({ cardId }: Props) {
+  const confirmDialog = useConfirm();
   const supabase = createClient();
 
   const [plans, setPlans] = useState<BudgetPlan[]>([]);
@@ -141,7 +143,13 @@ export default function ChiTieuClient({ cardId }: Props) {
   };
 
   const deletePlan = async (planId: string) => {
-    if (!confirm("Xóa ngân sách này và tất cả danh mục?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa ngân sách",
+      message: "Xóa ngân sách này và tất cả danh mục? Thao tác không thể hoàn tác.",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("budget_plans").delete().eq("id", planId);
     if (error) { toast.error(error.message); return; }
     const next = plans.filter((p) => p.id !== planId);
@@ -214,7 +222,13 @@ export default function ChiTieuClient({ cardId }: Props) {
   };
 
   const deleteCat = async (catId: string) => {
-    if (!confirm("Xóa danh mục này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa danh mục",
+      message: "Bạn có chắc muốn xóa danh mục này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("budget_categories").delete().eq("id", catId);
     if (error) { toast.error(error.message); return; }
     setCategories((prev) => prev.filter((c) => c.id !== catId));

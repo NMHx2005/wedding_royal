@@ -19,15 +19,9 @@ import {
 } from "lucide-react";
 import { CarouselThree } from "@/components/landing/CarouselThree";
 import { TypingText } from "@/components/landing/TypingText";
-import {
-  couplesShowcase,
-  featureBlocks,
-  MEHAPPY_ASSET,
-  showcaseTemplates,
-  stepsBlock,
-  whyChooseItems,
-} from "@/lib/data/mehappy-landing";
-import { getFaqItems } from "@/lib/data/faq-items";
+import { featureBlocks, MEHAPPY_ASSET, stepsBlock, whyChooseItems } from "@/lib/data/mehappy-landing";
+import type { CoupleShowcaseItem, TemplateShowcaseItem } from "@/lib/marketing/types";
+import type { FaqItem } from "@/types";
 
 const roseBtn =
   "inline-flex items-center justify-center rounded-full bg-rose-500 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-rose-900/10 transition hover:bg-rose-600 active:scale-[0.99] disabled:opacity-50";
@@ -36,12 +30,19 @@ const outlineBtn =
 const outlinePill =
   "inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-8 py-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50";
 
-function TierRibbon({ tier }: { tier: "vip" | "basic" }) {
+function TierRibbon({ tier }: { tier: "basic" | "pro" | "vip" }) {
   if (tier === "vip") {
     return (
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-600 to-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-50 shadow">
         <Crown className="h-3 w-3 text-amber-100" aria-hidden />
         VIP
+      </div>
+    );
+  }
+  if (tier === "pro") {
+    return (
+      <div className="absolute left-2 top-2 rounded-md bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+        Pro
       </div>
     );
   }
@@ -52,8 +53,13 @@ function TierRibbon({ tier }: { tier: "vip" | "basic" }) {
   );
 }
 
-export async function MehappyCloneHome() {
-  const faqItems = await getFaqItems();
+type Props = {
+  showcaseTemplates: TemplateShowcaseItem[];
+  couplesPreview: CoupleShowcaseItem[];
+  faqItems: FaqItem[];
+};
+
+export function MehappyCloneHome({ showcaseTemplates, couplesPreview, faqItems }: Props) {
   const whyIcons = [Heart, Share2, LayoutGrid, LayoutGrid, Wallet, Calendar] as const;
 
   return (
@@ -135,10 +141,10 @@ export async function MehappyCloneHome() {
           </div>
 
           <div className="relative mt-10 w-full min-w-0">
-            <CarouselThree autoMs={3000} slideKeys={showcaseTemplates.map((t) => t.title)}>
+            <CarouselThree autoMs={3000} slideKeys={showcaseTemplates.map((t) => t.id)}>
               {showcaseTemplates.map((t) => (
                 <div
-                  key={t.title}
+                  key={t.id}
                   className="card-hover flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm"
                 >
                   <div className="relative aspect-[3/4] max-h-72 shrink-0 overflow-hidden bg-neutral-100">
@@ -155,9 +161,9 @@ export async function MehappyCloneHome() {
                       </span>
                     )}
                     <div className="absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/50 to-transparent p-3 opacity-0 transition hover:opacity-100">
-                      <button type="button" className={outlineBtn}>
+                      <Link href={t.previewHref} className={outlineBtn}>
                         Xem nhanh
-                      </button>
+                      </Link>
                     </div>
                   </div>
                   <div className="flex flex-1 flex-col space-y-2 p-4">
@@ -175,7 +181,10 @@ export async function MehappyCloneHome() {
                         ))}
                       </div>
                     )}
-                    <Link href="/register" className={`${roseBtn} mt-auto w-full text-center`}>
+                    <Link
+                      href={`/register?template=${encodeURIComponent(t.id)}`}
+                      className={`${roseBtn} mt-auto w-full text-center`}
+                    >
                       Sử dụng mẫu
                     </Link>
                   </div>
@@ -291,7 +300,7 @@ export async function MehappyCloneHome() {
             </p>
           </div>
           <div className="mt-10 grid auto-rows-fr gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {couplesShowcase.map((c) => (
+            {couplesPreview.map((c) => (
               <div
                 key={c.id}
                 className="card-hover flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm"
@@ -302,14 +311,9 @@ export async function MehappyCloneHome() {
                     Thiệp cưới
                   </span>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition hover:opacity-100">
-                    <a
-                      href={c.invitationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={outlineBtn}
-                    >
+                    <Link href={c.invitationUrl} className={outlineBtn}>
                       Xem thiệp
-                    </a>
+                    </Link>
                   </div>
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
@@ -324,14 +328,12 @@ export async function MehappyCloneHome() {
                       <span className="line-clamp-2 leading-snug">{c.meta}</span>
                     </div>
                   </div>
-                  <a
+                  <Link
                     href={c.invitationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className={`${roseBtn} mt-auto w-full justify-center text-center`}
                   >
                     Xem thiệp
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -386,7 +388,7 @@ export async function MehappyCloneHome() {
         <div className="mx-auto max-w-3xl px-4">
           <h3 className="text-center text-2xl font-bold text-neutral-900">Những câu hỏi thường gặp</h3>
           <p className="mt-2 text-center text-sm text-neutral-600">
-            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng MeHappy.
+            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng Royal Wedding.
           </p>
           <div className="mt-8 space-y-3">
             {faqItems.map((item, idx) => (

@@ -3,14 +3,20 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCheck, Crown, Download, Trash2, X } from "lucide-react";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import type { Plan, WishRow } from "@/types";
 import { deleteWish, setWishApproved } from "@/app/actions/wishes-gifts";
 
 const PAGE_SIZES = [10, 20, 50] as const;
 
-type Props = { wishes: WishRow[]; plan: Plan; showUpsell?: boolean };
+type Props = { wishes: WishRow[]; plan: Plan; showUpsell?: boolean; canExportWishes?: boolean };
 
-export function LoiChucClient({ wishes: initial, showUpsell = false }: Props) {
+export function LoiChucClient({
+  wishes: initial,
+  showUpsell = false,
+  canExportWishes = false,
+}: Props) {
+  const confirmDialog = useConfirm();
   const [wishes, setWishes] = useState(initial);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"new" | "old">("new");
@@ -70,7 +76,13 @@ export function LoiChucClient({ wishes: initial, showUpsell = false }: Props) {
   };
 
   const bulkDelete = async () => {
-    if (!confirm(`Xóa ${selected.size} lời chúc đã chọn?`)) return;
+    const ok = await confirmDialog({
+      title: "Xóa lời chúc",
+      message: `Xóa ${selected.size} lời chúc đã chọn? Thao tác không thể hoàn tác.`,
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBulkLoading(true);
     const ids = Array.from(selected);
     await Promise.all(ids.map((id) => deleteWish(id)));
@@ -78,6 +90,22 @@ export function LoiChucClient({ wishes: initial, showUpsell = false }: Props) {
     setSelected(new Set());
     toast.success(`Đã xóa ${ids.length} lời chúc`);
     setBulkLoading(false);
+  };
+
+  const handleDeleteWish = async (id: string) => {
+    const ok = await confirmDialog({
+      title: "Xóa lời chúc",
+      message: "Bạn có chắc muốn xóa lời chúc này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const { error } = await deleteWish(id);
+    if (error) toast.error(error);
+    else {
+      setWishes((prev) => prev.filter((x) => x.id !== id));
+      toast.success("Đã xóa lời chúc");
+    }
   };
 
   const exportCSV = () => {
@@ -112,13 +140,23 @@ export function LoiChucClient({ wishes: initial, showUpsell = false }: Props) {
             <span className="text-neutral-400">({wishes.length} lời chúc · {wishes.filter((w) => w.is_approved).length} đã duyệt)</span>
           </p>
         </div>
-        <button
-          onClick={exportCSV}
-          className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-neutral-50"
-        >
-          <Download className="h-4 w-4" />
-          Xuất CSV
-        </button>
+        {canExportWishes ? (
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-neutral-50"
+          >
+            <Download className="h-4 w-4" />
+            Xuất CSV
+          </button>
+        ) : (
+          <a
+            href="/dashboard/goi-dich-vu"
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900"
+          >
+            <Crown className="h-4 w-4" />
+            Nâng cấp để xuất CSV
+          </a>
+        )}
       </div>
 
       {/* Upsell banner for basic */}
@@ -262,15 +300,7 @@ export function LoiChucClient({ wishes: initial, showUpsell = false }: Props) {
                 <button
                   type="button"
                   className="text-xs font-medium text-red-600 hover:underline"
-                  onClick={async () => {
-                    if (!confirm("Xóa lời chúc này?")) return;
-                    const { error } = await deleteWish(w.id);
-                    if (error) toast.error(error);
-                    else {
-                      setWishes((prev) => prev.filter((x) => x.id !== w.id));
-                      toast.success("Đã xóa lời chúc");
-                    }
-                  }}
+                  onClick={() => void handleDeleteWish(w.id)}
                 >
                   Xóa
                 </button>

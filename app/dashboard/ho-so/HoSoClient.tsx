@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { updateWeddingCard } from "@/app/actions/wedding-card";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { BrideGroomProfile } from "@/types";
@@ -137,18 +138,19 @@ export default function HoSoClient({ card, profiles: initialProfiles }: Props) {
   };
 
   const saveOther = async () => {
+    if (!card) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("wedding_cards")
-      .update({
-        wedding_date: otherForm.wedding_date || null,
-        venue_name: otherForm.venue_name || null,
-        love_story: otherForm.love_story || null,
-        hashtag: otherForm.hashtag || null,
-      })
-      .eq("id", card.id);
+    const weddingIso = otherForm.wedding_date
+      ? new Date(`${otherForm.wedding_date}T12:00:00`).toISOString()
+      : null;
+    const { error } = await updateWeddingCard(card.id, {
+      wedding_date: weddingIso,
+      venue_name: otherForm.venue_name || null,
+      love_story: otherForm.love_story || null,
+      hashtag: otherForm.hashtag || null,
+    });
     setSaving(false);
-    if (error) toast.error("Lỗi lưu: " + error.message);
+    if (error) toast.error(error);
     else toast.success("Đã lưu thông tin");
   };
 

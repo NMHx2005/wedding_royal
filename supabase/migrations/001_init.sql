@@ -1,4 +1,4 @@
--- meWedding schema — run in Supabase SQL editor or supabase db push
+-- Royal Wedding schema — run in Supabase SQL editor or supabase db push
 -- Storage: create public buckets `wedding-photos`, `wedding-music` in Dashboard (public read for invitation URLs)
 
 -- USERS (extend Supabase auth.users)

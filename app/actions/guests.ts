@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireCardSubscription } from "@/lib/subscription/require-card-subscription";
 
 export async function insertGuest(
   cardId: string,
   row: { name: string; group_label?: string | null; phone?: string | null; email?: string | null; is_vip?: boolean }
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
+  const gate = await requireCardSubscription(supabase, cardId);
+  if (!gate.ok) return { error: gate.error };
   const { error } = await supabase.from("guests").insert({
     card_id: cardId,
     name: row.name,
@@ -23,6 +26,10 @@ export async function insertGuest(
 
 export async function deleteGuest(guestId: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
+  const { data: guest } = await supabase.from("guests").select("card_id").eq("id", guestId).maybeSingle();
+  if (!guest?.card_id) return { error: "Không tìm thấy khách" };
+  const gate = await requireCardSubscription(supabase, guest.card_id);
+  if (!gate.ok) return { error: gate.error };
   const { error } = await supabase.from("guests").delete().eq("id", guestId);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/khach-moi");
@@ -34,6 +41,8 @@ export async function insertGuestsBulk(
   rows: { name: string; group_label?: string | null; phone?: string | null; email?: string | null }[]
 ): Promise<{ error: string | null; inserted: number }> {
   const supabase = await createClient();
+  const gate = await requireCardSubscription(supabase, cardId);
+  if (!gate.ok) return { error: gate.error, inserted: 0 };
   const payload = rows.map((r) => ({
     card_id: cardId,
     name: r.name,

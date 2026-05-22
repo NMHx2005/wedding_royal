@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { createFeaturePaymentSchema } from "@/lib/validations/api";
+import { getPlanConfig } from "@/lib/plans/plan-config";
+import { hasActiveSubscription } from "@/lib/plans/plan-access";
 import { generatePayOSOrderCode, getPayOS, payosPaymentDescription } from "@/lib/payos";
+import type { Plan } from "@/types";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -27,12 +30,20 @@ export async function POST(request: Request) {
 
   const { data: card, error: cardErr } = await supabase
     .from("wedding_cards")
-    .select("id, user_id")
+    .select("id, user_id, plan, paid_at")
     .eq("id", cardId)
     .maybeSingle();
 
   if (cardErr || !card || card.user_id !== user.id) {
     return NextResponse.json({ error: "Không tìm thấy thiệp" }, { status: 404 });
+  }
+
+  const planConfig = await getPlanConfig();
+  if (!hasActiveSubscription({ plan: card.plan as Plan, paid_at: card.paid_at }, planConfig)) {
+    return NextResponse.json(
+      { error: "Vui lòng mua gói dịch vụ trước khi mua tính năng lẻ" },
+      { status: 403 }
+    );
   }
 
   const { data: catalogRows, error: catalogErr } = await supabase

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import * as XLSX from "xlsx";
 import type { GiftLogRow } from "@/types";
 import { deleteGiftLog, insertGiftLog } from "@/app/actions/wishes-gifts";
@@ -10,6 +11,7 @@ import { formatVnd } from "@/lib/utils";
 type Props = { cardId: string; logs: GiftLogRow[] };
 
 export function MungCuoiClient({ cardId, logs: initial }: Props) {
+  const confirmDialog = useConfirm();
   const [logs, setLogs] = useState(initial);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -34,7 +36,13 @@ export function MungCuoiClient({ cardId, logs: initial }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Xóa bản ghi mừng cưới này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa bản ghi",
+      message: "Bạn có chắc muốn xóa bản ghi mừng cưới này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingId(id);
     const { error } = await deleteGiftLog(id);
     setDeletingId(null);

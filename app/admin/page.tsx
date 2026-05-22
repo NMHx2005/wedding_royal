@@ -64,7 +64,7 @@ export default async function AdminPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-neutral-500">Tổng quan hệ thống meWedding</p>
+        <p className="mt-1 text-sm text-neutral-500">Tổng quan hệ thống Royal Wedding</p>
       </div>
 
       {/* Stats */}

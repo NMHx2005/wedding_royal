@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { AdminFilterSelect, AdminListControls } from "@/components/admin/AdminListControls";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/lib/admin/useAdminPagination";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { AffiliateProduct } from "@/types";
 
@@ -21,14 +25,42 @@ function fmt(n: number) {
 }
 
 export default function ProductsAdminClient({ products: initial }: Props) {
+  const confirmDialog = useConfirm();
   const [products, setProducts] = useState(initial);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AffiliateProduct | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
 
-  const filtered = products.filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()) || p.category.includes(q.toLowerCase()));
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return products.filter((p) => {
+      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+      if (activeFilter === "active" && !p.is_active) return false;
+      if (activeFilter === "inactive" && p.is_active) return false;
+      if (!needle) return true;
+      return (
+        p.name.toLowerCase().includes(needle) ||
+        p.category.toLowerCase().includes(needle) ||
+        (p.description ?? "").toLowerCase().includes(needle)
+      );
+    });
+  }, [products, q, categoryFilter, activeFilter]);
+
+  const {
+    paginated,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    filteredCount,
+  } = useAdminPagination(filtered, [q, categoryFilter, activeFilter]);
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setModalOpen(true); };
   const openEdit = (p: AffiliateProduct) => {
@@ -59,7 +91,13 @@ export default function ProductsAdminClient({ products: initial }: Props) {
   };
 
   const del = async (id: string) => {
-    if (!confirm("Xóa sản phẩm này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa sản phẩm",
+      message: "Bạn có chắc muốn xóa sản phẩm này? Thao tác không thể hoàn tác.",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const supabase = createClient();
     await supabase.from("affiliate_products").delete().eq("id", id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -74,20 +112,38 @@ export default function ProductsAdminClient({ products: initial }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Sản phẩm liên kết</h1>
-          <p className="text-sm text-neutral-500">{products.length} sản phẩm</p>
-        </div>
-        <div className="flex gap-2">
-          <input className="rounded-lg border border-neutral-200 px-3 py-2 text-sm" placeholder="Tìm kiếm..." value={q} onChange={(e) => setQ(e.target.value)} />
-          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600">
-            <Plus className="h-4 w-4" /> Thêm
-          </button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Sản phẩm liên kết</h1>
+        <p className="text-sm text-neutral-500">{products.length} sản phẩm</p>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+      <AdminListControls
+        query={q}
+        onQueryChange={setQ}
+        placeholder="Tìm theo tên, danh mục..."
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      >
+        <AdminFilterSelect value={categoryFilter} onChange={setCategoryFilter}>
+          <option value="all">Tất cả danh mục</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+          ))}
+        </AdminFilterSelect>
+        <AdminFilterSelect value={activeFilter} onChange={(v) => setActiveFilter(v as "all" | "active" | "inactive")}>
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </AdminFilterSelect>
+      </AdminListControls>
+
+      <div className="flex justify-end">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600">
+          <Plus className="h-4 w-4" /> Thêm
+        </button>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-neutral-100 bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             <tr>
@@ -100,7 +156,7 @@ export default function ProductsAdminClient({ products: initial }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-50">
-            {filtered.map((p) => (
+            {paginated.map((p) => (
               <tr key={p.id} className="hover:bg-neutral-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -145,10 +201,19 @@ export default function ProductsAdminClient({ products: initial }: Props) {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="py-12 text-center text-neutral-400">Không tìm thấy sản phẩm</td></tr>
+              <tr><td colSpan={6} className="py-12 text-center text-neutral-400">{products.length === 0 ? "Chưa có sản phẩm" : "Không có kết quả phù hợp bộ lọc"}</td></tr>
             )}
           </tbody>
         </table>
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          filteredCount={filteredCount}
+          totalCount={products.length}
+          onPageChange={setPage}
+        />
       </div>
 
       {modalOpen && (

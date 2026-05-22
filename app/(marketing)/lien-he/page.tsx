@@ -4,13 +4,13 @@ import type { ContactSettings, SocialSettings } from "@/types";
 import { LienHeClient } from "./LienHeClient";
 
 export const metadata: Metadata = {
-  title: "Liên hệ — meWedding",
+  title: "Liên hệ — Royal Wedding",
   description:
-    "Liên hệ meHappy / meWedding — hỗ trợ tạo thiệp cưới online, tư vấn gói dịch vụ và chăm sóc khách hàng 24/7.",
+    "Liên hệ Royal Wedding — hỗ trợ tạo thiệp cưới online, tư vấn gói dịch vụ và chăm sóc khách hàng 24/7.",
 };
 
 const DEFAULT_CONTACT: ContactSettings = {
-  email: "hello@mewedding.vn",
+  email: "hello@royalwedding.vn",
   phone: "0282 2222 886",
   address: "Tầng 5, 77 Nguyễn Huệ, Q.1, TP.HCM",
   tax_url: "",
@@ -18,10 +18,10 @@ const DEFAULT_CONTACT: ContactSettings = {
 };
 
 const DEFAULT_SOCIAL: SocialSettings = {
-  facebook: "https://facebook.com/mewedding",
-  tiktok: "https://tiktok.com/@mewedding",
-  youtube: "https://youtube.com/@mewedding",
-  zalo: "https://zalo.me/mewedding",
+  facebook: "https://facebook.com/royalwedding",
+  tiktok: "https://tiktok.com/@royalwedding",
+  youtube: "https://youtube.com/@royalwedding",
+  zalo: "https://zalo.me/royalwedding",
   instagram: "",
 };
 

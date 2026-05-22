@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
+import { addWeddingPhoto, deleteWeddingPhoto, updateWeddingPhotoCaption } from "@/app/actions/wedding-card";
 import { createClient } from "@/lib/supabase/client";
 import type { Plan, WeddingPhoto } from "@/types";
 
@@ -20,6 +22,7 @@ export default function PhotobookClient({
   photobookEnabled,
   initialPhotos,
 }: Props) {
+  const confirmDialog = useConfirm();
   const [photos, setPhotos] = useState<WeddingPhoto[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -72,17 +75,12 @@ export default function PhotobookClient({
           data: { publicUrl },
         } = supabase.storage.from("wedding-photos").getPublicUrl(storagePath);
 
-        const nextOrder = photos.length + uploaded.length;
-        const { data: photo, error: dbError } = await supabase
-          .from("wedding_photos")
-          .insert({ card_id: cardId, url: publicUrl, caption: null, sort_order: nextOrder })
-          .select()
-          .single();
+        const { error: dbError, photo } = await addWeddingPhoto(cardId, publicUrl);
 
         if (dbError) {
-          toast.error(`Lỗi lưu ảnh: ${dbError.message}`);
+          toast.error(`Lỗi lưu ảnh: ${dbError}`);
         } else if (photo) {
-          uploaded.push(photo as WeddingPhoto);
+          uploaded.push(photo);
         }
 
         setUploadProgress(Math.round(((i + 1) / toUpload.length) * 100));
@@ -105,13 +103,9 @@ export default function PhotobookClient({
   );
 
   const handleSaveCaption = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("wedding_photos")
-      .update({ caption: editCaption })
-      .eq("id", id);
+    const { error } = await updateWeddingPhotoCaption(id, editCaption);
     if (error) {
-      toast.error("Lỗi cập nhật chú thích.");
+      toast.error(error);
     } else {
       setPhotos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, caption: editCaption } : p))
@@ -122,15 +116,21 @@ export default function PhotobookClient({
   };
 
   const handleDelete = async (photo: WeddingPhoto) => {
-    if (!confirm("Xóa ảnh này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa ảnh",
+      message: "Bạn có chắc muốn xóa ảnh này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const supabase = createClient();
     const urlParts = photo.url.split("/wedding-photos/");
     if (urlParts.length > 1) {
       await supabase.storage.from("wedding-photos").remove([urlParts[1]]);
     }
-    const { error } = await supabase.from("wedding_photos").delete().eq("id", photo.id);
+    const { error } = await deleteWeddingPhoto(photo.id);
     if (error) {
-      toast.error("Lỗi xóa ảnh.");
+      toast.error(error);
     } else {
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
       toast.success("Đã xóa ảnh.");

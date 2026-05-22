@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { isCardSubscriptionActive } from "@/lib/plans/is-card-subscription-active";
+import { userHasActiveSubscription } from "@/lib/plans/is-card-subscription-active";
 import { getPlanConfigWithClient } from "@/lib/plans/plan-config";
 import { createMiddlewareSupabase } from "@/lib/supabase/middleware";
 
@@ -23,29 +23,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (
-    user &&
-    pathname.startsWith("/dashboard") &&
-    !pathname.startsWith("/dashboard/goi-dich-vu")
-  ) {
-    const [{ data: card }, planConfig] = await Promise.all([
-      supabase
-        .from("wedding_cards")
-        .select("paid_at, plan")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle(),
-      getPlanConfigWithClient(supabase),
-    ]);
-
-    if (!isCardSubscriptionActive(card, planConfig)) {
-      const paywall = new URL("/dashboard/goi-dich-vu", request.url);
-      paywall.searchParams.set("paywall", "1");
-      return NextResponse.redirect(paywall);
-    }
-  }
-
   if (pathname.startsWith("/admin")) {
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -54,6 +31,37 @@ export async function middleware(request: NextRequest) {
       .single();
     if (error || profile?.role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
+  if (
+    user &&
+    pathname.startsWith("/dashboard") &&
+    !pathname.startsWith("/dashboard/goi-dich-vu")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "admin") {
+      const [{ data: cards }, planConfig] = await Promise.all([
+        supabase
+          .from("wedding_cards")
+          .select("paid_at, plan")
+          .eq("user_id", user.id),
+        getPlanConfigWithClient(supabase),
+      ]);
+
+      if (!userHasActiveSubscription(cards ?? [], planConfig)) {
+        const paywall = new URL("/dashboard/goi-dich-vu", request.url);
+        paywall.searchParams.set("paywall", "1");
+        if (pathname !== "/dashboard/goi-dich-vu") {
+          paywall.searchParams.set("from", pathname);
+        }
+        return NextResponse.redirect(paywall);
+      }
     }
   }
 

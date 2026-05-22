@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import type { GuestExtended, GuestGroup } from "@/types";
 
 type CardInfo = { id: string; plan: string; slug: string } | null;
@@ -48,6 +49,7 @@ export default function KhachMoiClient({
   initialGuests,
   initialGroups,
 }: Props) {
+  const confirmDialog = useConfirm();
   const supabase = createClient();
 
   const [guests, setGuests] = useState<GuestExtended[]>(initialGuests);
@@ -198,7 +200,13 @@ export default function KhachMoiClient({
 
   // ── Delete guest ────────────────────────────────────────────────────────────
   const deleteGuest = async (id: string) => {
-    if (!confirm("Xóa khách này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa khách",
+      message: "Bạn có chắc muốn xóa khách này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     await supabase.from("guests").delete().eq("id", id);
     setGuests((prev) => prev.filter((g) => g.id !== id));
     setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
@@ -221,7 +229,13 @@ export default function KhachMoiClient({
 
   // ── Bulk actions ────────────────────────────────────────────────────────────
   const bulkDelete = async () => {
-    if (!confirm(`Xóa ${selected.size} khách đã chọn?`)) return;
+    const ok = await confirmDialog({
+      title: "Xóa khách đã chọn",
+      message: `Xóa ${selected.size} khách đã chọn? Thao tác không thể hoàn tác.`,
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const ids = Array.from(selected);
     await supabase.from("guests").delete().in("id", ids);
     setGuests((prev) => prev.filter((g) => !ids.includes(g.id)));
@@ -308,7 +322,13 @@ export default function KhachMoiClient({
   };
 
   const deleteGroup = async (id: string) => {
-    if (!confirm("Xóa nhóm này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa nhóm",
+      message: "Bạn có chắc muốn xóa nhóm khách này?",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     await supabase.from("guest_groups").delete().eq("id", id);
     setGroups((prev) => prev.filter((g) => g.id !== id));
     if (activeGroupId === id) setActiveGroupId(null);

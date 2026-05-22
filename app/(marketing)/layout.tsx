@@ -7,9 +7,9 @@ import type { SeoSettings } from "@/types";
 
 const DEFAULT_SEO: SeoSettings = {
   title:
-    "Tạo Thiệp cưới online Miễn phí - Thiệp cưới điện tử Miễn phí - Mời cưới thời 5.0 - Hiện Đại và Sang Trọng",
+    "Royal Wedding — Thiệp cưới online & điện tử | Mời cưới thời 5.0",
   description:
-    "Nền tảng tạo thiệp cưới online, thiệp cưới điện tử miễn phí với đa dạng mẫu mã, hiện đại và sang trọng | Mời cưới thời 5.0 - Cho đám cưới của bạn trở nên độc đáo và đáng nhớ hơn với mọi người. Lưu giữ khoảnh khắc trọng đại mãi mãi về sau | meWedding",
+    "Nền tảng tạo thiệp cưới online với gói Basic, Pro, VIP — mẫu hiện đại, RSVP, lời chúc và thanh toán PayOS. Mời cưới thời 5.0 cho đám cưới của bạn.",
   og_image: "https://mehappy.vn/images/logo-mehappy.png",
 };
 

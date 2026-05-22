@@ -1,28 +1,27 @@
-import { ensureWeddingCard } from "@/app/actions/wedding-card";
 import { createClient } from "@/lib/supabase/server";
-import { ThietLapForm } from "./ThietLapForm";
+import { redirect } from "next/navigation";
 
 export default async function ThietLapPage({
   searchParams,
 }: {
-  searchParams: { template?: string };
+  searchParams: Promise<{ cardId?: string; template?: string; needTemplate?: string; source?: string }>;
 }) {
-  const ensured = await ensureWeddingCard();
-  if (!ensured.data) {
-    return <p className="text-red-600">{ensured.error}</p>;
-  }
   const supabase = await createClient();
-  const { data: photos } = await supabase
-    .from("wedding_photos")
-    .select("*")
-    .eq("card_id", ensured.data.id)
-    .order("sort_order", { ascending: true });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  return (
-    <ThietLapForm
-      card={ensured.data}
-      photos={photos ?? []}
-      initialTemplateFromQuery={searchParams.template}
-    />
-  );
+  const { cardId, template, needTemplate, source } = await searchParams;
+
+  let q = supabase.from("wedding_cards").select("id").eq("user_id", user.id);
+  if (cardId) q = q.eq("id", cardId);
+  const { data: card } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+  if (!card) redirect("/dashboard");
+
+  const params = new URLSearchParams();
+  if (template) params.set("template", template);
+  if (needTemplate) params.set("needTemplate", needTemplate);
+  if (source) params.set("source", source);
+  const qs = params.toString();
+  redirect(`/dashboard/${card.id}/thiet-lap${qs ? `?${qs}` : ""}`);
 }

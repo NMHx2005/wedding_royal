@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { AdminFilterSelect, AdminListControls } from "@/components/admin/AdminListControls";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/lib/admin/useAdminPagination";
 import type { UserRole, Plan, CardStatus } from "@/types";
 
 type CardInfo = {
@@ -95,6 +98,33 @@ function ActionDropdown<T extends string>({
 export default function UsersTable({ initialRows }: { initialRows: UserRow[] }) {
   const [rows, setRows] = useState(initialRows);
   const [pending, startTransition] = useTransition();
+  const [q, setQ] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (roleFilter !== "all" && row.role !== roleFilter) return false;
+      if (!needle) return true;
+      return (
+        (row.full_name ?? "").toLowerCase().includes(needle) ||
+        row.email.toLowerCase().includes(needle) ||
+        (row.phone ?? "").includes(needle)
+      );
+    });
+  }, [rows, q, roleFilter]);
+
+  const {
+    paginated,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    filteredCount,
+  } = useAdminPagination(filtered, [q, roleFilter]);
 
   const patchUser = async (payload: {
     userId?: string;
@@ -151,7 +181,22 @@ export default function UsersTable({ initialRows }: { initialRows: UserRow[] }) 
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="space-y-4">
+      <AdminListControls
+        query={q}
+        onQueryChange={setQ}
+        placeholder="Tìm theo tên, email, SĐT..."
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      >
+        <AdminFilterSelect value={roleFilter} onChange={(v) => setRoleFilter(v as "all" | UserRole)}>
+          <option value="all">Tất cả role</option>
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </AdminFilterSelect>
+      </AdminListControls>
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -167,11 +212,12 @@ export default function UsersTable({ initialRows }: { initialRows: UserRow[] }) 
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {rows.map((row, idx) => {
+            {paginated.map((row, idx) => {
               const latestCard = row.wedding_cards[0] ?? null;
+              const rowNum = rangeStart + idx;
               return (
                 <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
+                  <td className="px-4 py-3 text-gray-400">{rowNum}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
@@ -241,11 +287,21 @@ export default function UsersTable({ initialRows }: { initialRows: UserRow[] }) 
             })}
           </tbody>
         </table>
-        {rows.length === 0 && (
+        {filtered.length === 0 && (
           <div className="py-16 text-center text-gray-400">
-            Chưa có người dùng nào.
+            {rows.length === 0 ? "Chưa có người dùng nào." : "Không có kết quả phù hợp bộ lọc."}
           </div>
         )}
+      </div>
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        filteredCount={filteredCount}
+        totalCount={rows.length}
+        onPageChange={setPage}
+      />
       </div>
     </div>
   );

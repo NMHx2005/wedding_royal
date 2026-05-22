@@ -6,8 +6,6 @@ import { ChevronDown, MapPin } from "lucide-react";
 import type { Guest, WeddingCard, WeddingPhoto } from "@/types";
 import { formatWeddingDateVi } from "@/lib/format-wedding";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
-import { BackgroundMusic } from "@/components/invitation/BackgroundMusic";
-import { ConfettiEffect } from "@/components/invitation/ConfettiEffect";
 import { RsvpSection } from "@/components/invitation/RsvpSection";
 import { WishesSection } from "@/components/invitation/WishesSection";
 
@@ -70,10 +68,10 @@ export function InvitationSections({ card, photos, guest, theme }: TemplateProps
     theme === "minimal" ? { ["--accent" as string]: card.primary_color } : undefined;
 
   return (
-    <div className={`relative min-h-screen font-sans ${t.page}`} style={style}>
-      <BackgroundMusic src={card.background_music_url} />
-      <ConfettiEffect type={card.confetti_effect} />
-
+    <div
+      className={`relative min-h-screen w-full max-w-full overflow-x-clip font-sans ${t.page}`}
+      style={style}
+    >
       <section className="relative flex min-h-[85vh] flex-col items-center justify-center px-6 pb-24 pt-16 text-center">
         <p className={`text-sm uppercase tracking-[0.2em] ${t.heroSub}`}>Trân trọng kính mời</p>
         {guest && (
@@ -206,7 +204,7 @@ export function InvitationSections({ card, photos, guest, theme }: TemplateProps
 
       <footer className={`px-4 py-10 text-center text-sm ${t.footer}`}>
         {card.hashtag && <p className={`font-medium ${t.accent}`}>{card.hashtag}</p>}
-        {!card.remove_branding && <p className="mt-2">Thiệp được tạo bởi meWedding</p>}
+        {!card.remove_branding && <p className="mt-2">Thiệp được tạo bởi Royal Wedding</p>}
       </footer>
     </div>
   );

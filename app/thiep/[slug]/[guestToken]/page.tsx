@@ -7,6 +7,8 @@ import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
 import { TrackView } from "@/components/invitation/TrackView";
 import type { Guest, WeddingCard } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 type Props = { params: { slug: string; guestToken: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -64,9 +66,7 @@ export default async function GuestInvitationPage({ params }: Props) {
   return (
     <>
       <TrackView slug={params.slug} />
-      <div className="mx-auto min-h-screen max-w-[480px] bg-neutral-100 shadow-xl">
-        <InvitationRenderer card={card as WeddingCard} photos={photos ?? []} guest={guest} />
-      </div>
+      <InvitationRenderer card={card as WeddingCard} photos={photos ?? []} guest={guest} />
     </>
   );
 }

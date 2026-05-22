@@ -3,7 +3,7 @@ import type { ContactSettings, SocialSettings } from "@/types";
 import { createPublicSupabase } from "@/lib/supabase/public";
 
 const DEFAULT_CONTACT: ContactSettings = {
-  email: "hello@mewedding.vn",
+  email: "hello@royalwedding.vn",
   phone: "0282 2222 886",
   address: "Tầng 5, 77 Nguyễn Huệ, Q.1, TP.HCM",
   tax_url: "",
@@ -11,21 +11,21 @@ const DEFAULT_CONTACT: ContactSettings = {
 };
 
 const DEFAULT_SOCIAL: SocialSettings = {
-  facebook: "https://facebook.com/mewedding",
-  tiktok: "https://tiktok.com/@mewedding",
-  youtube: "https://youtube.com/@mewedding",
-  zalo: "https://zalo.me/mewedding",
+  facebook: "https://facebook.com/royalwedding",
+  tiktok: "https://tiktok.com/@royalwedding",
+  youtube: "https://youtube.com/@royalwedding",
+  zalo: "https://zalo.me/royalwedding",
   instagram: "",
 };
 
 const serviceItems = [
-  "meWedding",
+  "Royal Wedding",
   "meBirthday (Coming Soon)",
   "meEvent (Coming Soon)",
-  "meWedding Invite",
+  "Royal Wedding Invite",
   "meInvite",
   "meVideo",
-  "meWedding Planner",
+  "Royal Wedding Planner",
 ];
 
 const footerLinks = ["Trang chủ", "Điều khoản sử dụng", "Chính sách bảo mật", "Chăm sóc khách hàng", "Thanh toán"];
@@ -72,7 +72,7 @@ export async function MarketingFooter() {
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid gap-10 md:grid-cols-3">
             <div className="space-y-4">
-              <p className="text-lg font-bold text-rose-600">meWedding</p>
+              <p className="text-lg font-bold text-rose-600">Royal Wedding</p>
               <div className="space-y-2 text-sm text-neutral-700">
                 <p>Gửi hạnh phúc - Kết nối yêu thương</p>
                 {contact.address && (
@@ -126,7 +126,7 @@ export async function MarketingFooter() {
             </div>
 
             <div>
-              <p className="mb-4 text-sm font-bold text-neutral-800">| meWedding</p>
+              <p className="mb-4 text-sm font-bold text-neutral-800">| Royal Wedding</p>
               <ul className="space-y-2 text-sm text-neutral-700">
                 {footerLinks.map((label) => (
                   <li key={label}>
@@ -151,7 +151,7 @@ export async function MarketingFooter() {
 
       <div className="bg-neutral-900 py-4">
         <div className="mx-auto max-w-6xl px-4 text-center">
-          <p className="text-xs text-neutral-400">Copyright © 2025 meWedding. All rights reserved</p>
+          <p className="text-xs text-neutral-400">Copyright © 2025 Royal Wedding. All rights reserved</p>
         </div>
       </div>
     </footer>

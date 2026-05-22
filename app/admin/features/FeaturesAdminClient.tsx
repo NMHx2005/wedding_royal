@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Search,
 } from "lucide-react";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { normalizeFeatureKey } from "@/lib/features/normalize-feature-key";
 import type { FeatureCatalogItem } from "@/types";
 
@@ -279,6 +280,7 @@ export default function FeaturesAdminClient({
 }: {
   initialFeatures: FeatureCatalogItem[];
 }) {
+  const confirmDialog = useConfirm();
   const [features, setFeatures] = useState(initialFeatures);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -375,13 +377,13 @@ export default function FeaturesAdminClient({
   };
 
   const handleDelete = async (key: string, name: string) => {
-    if (
-      !confirm(
-        `Xóa tính năng "${name}" (${key})?\n\nNếu đã có khách mua, hệ thống sẽ từ chối xóa — hãy tắt Active.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Xóa tính năng",
+      message: `Xóa tính năng "${name}" (${key})?\n\nNếu đã có khách mua, hệ thống sẽ từ chối xóa — hãy tắt Active.`,
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingKey(key);
     const res = await fetch(
       `/api/admin/features?key=${encodeURIComponent(key)}`,

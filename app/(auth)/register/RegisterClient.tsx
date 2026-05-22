@@ -12,13 +12,17 @@ import { AuthMehappyShell, GoogleIcon } from "@/components/auth/AuthMehappyShell
 import { createClient } from "@/lib/supabase/client";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 import { FadeIn } from "@/components/motion/gentle";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { getAuthErrorMessage } from "@/lib/auth/auth-errors";
 
 export function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeRedirectPath(searchParams.get("next"));
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   const {
     register,
@@ -36,21 +40,47 @@ export function RegisterClient() {
 
   const onSubmit = async (values: RegisterInput) => {
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
         data: { full_name: values.fullName },
-        emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+        emailRedirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent(next)}` : undefined,
       },
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(getAuthErrorMessage(error));
       return;
     }
+
+    // Supabase bật "Confirm email" → không có session cho đến khi user bấm link trong email
+    if (!data.session) {
+      setPendingEmail(values.email.trim());
+      toast.success("Đăng ký thành công — vui lòng xác nhận email");
+      return;
+    }
+
     toast.success("Đăng ký thành công");
-    router.push("/dashboard");
+    router.push(next);
     router.refresh();
+  };
+
+  const resendConfirmation = async () => {
+    if (!pendingEmail) return;
+    setResending(true);
+    const supabase = createClient();
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: pendingEmail,
+      options: {
+        emailRedirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent(next)}` : undefined,
+      },
+    });
+    setResending(false);
+    if (error) toast.error(getAuthErrorMessage(error));
+    else toast.success("Đã gửi lại email xác nhận");
   };
 
   const google = async () => {
@@ -71,6 +101,35 @@ export function RegisterClient() {
   return (
     <AuthMehappyShell authMode="register">
       <FadeIn className="w-full max-w-md" delay={0.06}>
+        {pendingEmail ? (
+          <div className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-xl shadow-rose-200/20 backdrop-blur-sm sm:p-8">
+            <h1 className="text-center text-xl font-bold text-neutral-900 sm:text-2xl">Xác nhận email</h1>
+            <p className="mt-3 text-center text-sm leading-relaxed text-neutral-600">
+              Chúng tôi đã gửi link xác nhận tới{" "}
+              <span className="font-semibold text-neutral-900">{pendingEmail}</span>.
+              Vui lòng mở email và bấm link trước khi đăng nhập.
+            </p>
+            <p className="mt-2 text-center text-xs text-neutral-500">
+              Không thấy email? Kiểm tra mục Spam / Quảng cáo.
+            </p>
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => void resendConfirmation()}
+                disabled={resending}
+                className="flex h-11 w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+              >
+                {resending ? "Đang gửi lại…" : "Gửi lại email xác nhận"}
+              </button>
+              <Link
+                href="/login"
+                className="flex h-11 w-full items-center justify-center rounded-xl bg-red-500 text-sm font-bold text-white transition hover:bg-red-600"
+              >
+                Đi tới đăng nhập
+              </Link>
+            </div>
+          </div>
+        ) : (
         <form
           className="rounded-2xl border border-white/70 bg-white/95 p-6 shadow-xl shadow-rose-200/20 backdrop-blur-sm sm:p-8"
           onSubmit={handleSubmit(onSubmit)}
@@ -78,7 +137,7 @@ export function RegisterClient() {
         >
           <h1 className="text-center text-xl font-bold text-neutral-900 sm:text-2xl">Đăng ký</h1>
           <p className="mt-2 text-center text-sm text-neutral-600">
-            Tạo tài khoản miễn phí để bắt đầu thiệp cưới điện tử của bạn.
+            Tạo tài khoản để bắt đầu thiệp cưới điện tử — chọn gói Basic, Pro hoặc VIP sau khi đăng ký.
           </p>
 
           <div className="mt-6">
@@ -205,6 +264,7 @@ export function RegisterClient() {
             </Link>
           </p>
         </form>
+        )}
       </FadeIn>
     </AuthMehappyShell>
   );

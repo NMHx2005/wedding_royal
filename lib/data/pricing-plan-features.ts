@@ -9,17 +9,17 @@ export type PlanFeatureRow = {
   vip: FeatureCell;
 };
 
-/** Danh sách tính năng đầy đủ cho modal "Chi tiết gói" (theo meHappy). */
+/** Danh sách tính năng đầy đủ cho modal "Chi tiết gói". */
 export const PLAN_FEATURE_ROWS: PlanFeatureRow[] = [
   {
-    label: "meHappy sẽ thiết kế thiệp, cài đặt thiệp cho bạn từ A–Z",
+    label: "Royal Wedding sẽ thiết kế thiệp, cài đặt thiệp cho bạn từ A–Z",
     basic: "no",
     pro: "no",
     vip: "no",
   },
   { label: "Hỗ trợ mọi lúc mọi nơi", basic: "yes", pro: "yes", vip: "yes" },
   {
-    label: "Chỉnh sửa không giới hạn số lần hay thời gian trên website meHappy",
+    label: "Chỉnh sửa không giới hạn số lần hay thời gian trên website Royal Wedding",
     basic: "yes",
     pro: "yes",
     vip: "yes",
@@ -48,7 +48,7 @@ export const PLAN_FEATURE_ROWS: PlanFeatureRow[] = [
   { label: 'Tính năng "Đếm ngược thời gian" đến sự kiện cưới', basic: "yes", pro: "yes", vip: "yes" },
   { label: "Google Maps chỉ dẫn đến nơi diễn ra sự kiện cưới", basic: "yes", pro: "yes", vip: "yes" },
   { label: "Tuỳ chỉnh hiệu ứng hiển thị tim, tuyết, hoa rơi", basic: "no", pro: "yes", vip: "yes" },
-  { label: "Loại bỏ quảng cáo trên website meHappy, meWedding", basic: "no", pro: "yes", vip: "yes" },
+  { label: "Loại bỏ quảng cáo trên website Royal Wedding", basic: "no", pro: "yes", vip: "yes" },
   {
     label: "Thống kê thiệp (lượt truy cập, khách mời, lời chúc, …)",
     basic: "no",
@@ -129,7 +129,7 @@ export const PLAN_FEATURE_ROWS: PlanFeatureRow[] = [
   { label: "Tính năng nhắc lịch hẹn đến ngày cưới", basic: "no", pro: "no", vip: "yes" },
   { label: "Tính năng gửi mail nhắc ngày cưới", basic: "no", pro: "no", vip: "yes" },
   { label: "Tạo logo riêng cho đám cưới", basic: "no", pro: "no", vip: "yes" },
-  { label: "Loại bỏ logo meHappy, meWedding", basic: "no", pro: "no", vip: "yes" },
+  { label: "Loại bỏ logo Royal Wedding", basic: "no", pro: "no", vip: "yes" },
   { label: "Tích hợp tên miền riêng (Custom Domain)", basic: "no", pro: "no", vip: "yes" },
   { label: "Yêu cầu toàn quyền (Admin)", basic: "no", pro: "no", vip: "yes" },
   { label: "Tuỳ chỉnh mã QR code", basic: "no", pro: "no", vip: "yes" },

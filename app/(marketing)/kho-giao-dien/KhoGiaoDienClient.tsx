@@ -51,6 +51,11 @@ function normalize(s: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** preview_url trỏ thiệp thật (/thiep/slug) */
+function isLiveInvitationPreview(url: string | null | undefined) {
+  return !!url && url.startsWith("/thiep/");
+}
+
 export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
   const [plan, setPlan] = useState<PlanFilter>("all");
   const [tag, setTag] = useState("");
@@ -234,7 +239,7 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
             {(
               [
                 ["all", "Tất cả"],
-                ["basic", "Miễn phí"],
+                ["basic", "Basic"],
                 ["pro", "Pro"],
                 ["vip", "VIP"],
               ] as const
@@ -254,7 +259,7 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
             {(
               [
                 ["all", "Tất cả"],
-                ["basic", "Miễn phí"],
+                ["basic", "Basic"],
                 ["pro", "Pro"],
                 ["vip", "VIP"],
               ] as const
@@ -300,7 +305,7 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
                     <Image src={img} alt={t.name} fill className="object-cover object-top" sizes="(max-width:768px) 100vw, 360px" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-rose-100 via-rose-50 to-white">
-                      <span className="font-serif text-xl font-semibold text-rose-400/90">meWedding</span>
+                      <span className="font-serif text-xl font-semibold text-rose-400/90">Royal Wedding</span>
                     </div>
                   )}
                   <div className={clsx("absolute left-2 top-2 z-10 flex items-center gap-1 rounded-md px-2 py-0.5", ui.wrap)}>
@@ -324,13 +329,24 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
                     ))}
                   </div>
                   <div className="mt-auto flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setPreview(t)}
-                      className="flex-1 rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50"
-                    >
-                      Xem thiệp
-                    </button>
+                    {isLiveInvitationPreview(t.preview_url) ? (
+                      <Link
+                        href={t.preview_url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50"
+                      >
+                        Xem thiệp
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPreview(t)}
+                        className="flex-1 rounded-xl border border-neutral-200 py-2.5 text-center text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50"
+                      >
+                        Xem thiệp
+                      </button>
+                    )}
                     <Link
                       href="/register"
                       className="flex-1 rounded-xl bg-rose-500 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600"
@@ -393,7 +409,7 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
           <div className="md:flex md:items-end md:justify-between md:gap-8">
             <div className="max-w-xl">
               <p className="text-lg font-bold text-neutral-900 sm:text-xl">
-                Trở thành Đối tác hoặc Nhà thiết kế của meWedding
+                Trở thành Đối tác hoặc Nhà thiết kế của Royal Wedding
               </p>
               <p className="mt-2 text-sm leading-relaxed text-neutral-600">
                 Tham gia cộng đồng sáng tạo của chúng tôi và kiếm tiền bằng cách chia sẻ các thiết kế đẹp mắt của bạn hoặc
@@ -402,13 +418,13 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center md:mt-0 md:shrink-0">
               <a
-                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Đại lý meWedding"
+                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Đại lý Royal Wedding"
                 className="inline-flex items-center justify-center rounded-xl bg-purple-600 px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-purple-700"
               >
                 Đăng ký Đại lý
               </a>
               <a
-                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Nhà sáng tạo meWedding"
+                href="mailto:mehappy.vnn@gmail.com?subject=Đăng ký Nhà sáng tạo Royal Wedding"
                 className="inline-flex items-center justify-center rounded-xl bg-rose-400 px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-rose-500"
               >
                 Đăng ký Nhà sáng tạo
@@ -423,7 +439,7 @@ export function KhoGiaoDienClient({ templates, faqItems = faqMehappy }: Props) {
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="text-center text-2xl font-bold text-neutral-900">Những câu hỏi thường gặp</h2>
           <p className="mx-auto mt-2 max-w-lg text-center text-sm text-neutral-600">
-            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng MeHappy.
+            Giải đáp những câu hỏi thường gặp nhất về việc sử dụng Royal Wedding.
           </p>
           <div className="mt-8 space-y-2">
             {faqItems.map((item, i) => (

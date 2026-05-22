@@ -1,5 +1,5 @@
 {
-  "name": "mewedding",
+  "name": "royal-wedding",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,9 +11,13 @@
     "clean:build": "npm run clean && npm run build",
     "dev:clean": "npm run clean && npm run dev",
     "dev:fresh": "npm run dev:clean",
-    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs"
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs",
+    "generate:premium-preset": "node scripts/generate-premium-preset.mjs",
+    "seed:premium-template": "node scripts/generate-premium-preset.mjs && node --env-file=.env.local scripts/seed-premium-template.mjs",
+    "validate:premium-preset": "node scripts/validate-premium-preset.mjs"
   },
   "dependencies": {
+    "@craftjs/core": "^0.2.12",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -26,6 +30,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "animate.css": "^4.1.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
@@ -37,6 +42,7 @@
     "react-dom": "^18",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.75.0",
+    "react-moveable": "^0.56.0",
     "sharp": "^0.34.5",
     "sonner": "^2.0.7",
     "swiper": "^11.2.10",

@@ -1,42 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import KhachMoiClient from "./KhachMoiClient";
 
-export const metadata = { title: "Quản lý khách mời" };
-
-export default async function KhachMoiPage() {
+export default async function KhachMoiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cardId?: string }>;
+}) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: card } = await supabase
-    .from("wedding_cards")
-    .select("id, plan, slug")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { cardId } = await searchParams;
 
-  const [{ data: guests }, { data: groups }] = card
-    ? await Promise.all([
-        supabase
-          .from("guests")
-          .select("*")
-          .eq("card_id", card.id)
-          .order("created_at"),
-        supabase
-          .from("guest_groups")
-          .select("*")
-          .eq("card_id", card.id)
-          .order("created_at"),
-      ])
-    : [{ data: [] }, { data: [] }];
+  let q = supabase.from("wedding_cards").select("id").eq("user_id", user.id);
+  if (cardId) q = q.eq("id", cardId);
+  const { data: card } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
-  return (
-    <KhachMoiClient
-      card={card ?? null}
-      initialGuests={guests ?? []}
-      initialGroups={groups ?? []}
-    />
-  );
+  if (!card) redirect("/dashboard");
+  redirect(`/dashboard/${card.id}/khach-moi`);
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Bell,
-  ChevronDown,
   ChevronLeft,
   Crown,
   HelpCircle,
@@ -18,11 +18,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MEHAPPY_ASSET } from "@/lib/data/mehappy-landing";
-import { DASHBOARD_NAV, DASHBOARD_QUICK_LINKS } from "@/lib/dashboard/nav";
+import { buildCardNav, DASHBOARD_USER_NAV } from "@/lib/dashboard/nav";
 import type { Plan } from "@/types";
 import { cn } from "@/lib/utils";
+import { SUBSCRIPTION_ACTIVATE_PATH } from "@/lib/subscription/messages";
+import { notifySubscriptionRequired } from "@/lib/subscription/notify-subscription-required";
 import { DashboardAccountMenu } from "./DashboardAccountMenu";
 import { FeaturePurchaseModal } from "./FeaturePurchaseModal";
+import { SubscriptionPaywallBanner } from "./SubscriptionPaywallBanner";
 
 type Props = {
   children: ReactNode;
@@ -31,24 +34,48 @@ type Props = {
   plan: Plan;
   slug: string | null;
   cardId: string | null;
+  /** "home" = card list home; "card" = inside a specific card dashboard */
+  mode?: "home" | "card";
+  /** Display name for current card (e.g. "Quang Huy & Mỹ Linh") */
+  cardName?: string | null;
+  /** Craft.js editor available for this card */
+  canOpenVisualEditor?: boolean;
+  /** raw-html | craft | none — for editor sidebar link */
+  invitationContentKind?: "none" | "raw-html" | "craft";
+  /** False when user has not paid for any plan — locks dashboard nav */
+  subscriptionActive?: boolean;
 };
 
-function planBadgeLabel(plan: Plan) {
+export function planBadgeLabel(plan: Plan) {
   if (plan === "vip") return "VIP";
   if (plan === "pro") return "PRO";
   return "BASIC";
 }
 
-export function DashboardChrome({ children, userEmail, fullName, plan, slug, cardId }: Props) {
+export function DashboardChrome({
+  children,
+  userEmail,
+  fullName,
+  plan,
+  slug,
+  cardId,
+  mode = "home",
+  cardName,
+  canOpenVisualEditor: canOpenVisualEditorProp = false,
+  invitationContentKind = "none",
+  subscriptionActive = true,
+}: Props) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [expandedHome, setExpandedHome] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const [featureModalOpen, setFeatureModalOpen] = useState(false);
 
   const displayName = fullName || userEmail.split("@")[0] || userEmail;
+
+  const navItems =
+    mode === "card" && cardId ? buildCardNav(cardId) : DASHBOARD_USER_NAV;
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -68,8 +95,159 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
   }, [mobileNavOpen]);
 
   const hideSupportFab = pathname.startsWith("/dashboard/video-orders");
+  const isVisualEditor = pathname.startsWith("/dashboard/editor/");
 
-  const comingSoon = () => toast.message("Tính năng đang được phát triển");
+  if (isVisualEditor) {
+    return <>{children}</>;
+  }
+
+  const isActiveHref = (href: string) =>
+    href === "/dashboard"
+      ? pathname === "/dashboard"
+      : pathname === href || pathname.startsWith(`${href}/`);
+
+  const isSubscriptionGatedHref = (href: string) =>
+    !subscriptionActive && href !== SUBSCRIPTION_ACTIVATE_PATH;
+
+  const handleGatedNav = (href: string | undefined, label: string, e: ReactMouseEvent) => {
+    if (!href || !isSubscriptionGatedHref(href)) return;
+    e.preventDefault();
+    notifySubscriptionRequired({ feature: label });
+  };
+
+  const SidebarNav = () => (
+    <nav className="flex-1 space-y-1 overflow-y-auto p-2">
+      {pathname !== "/dashboard" && subscriptionActive && (
+        <Link
+          href="/dashboard"
+          onClick={() => setMobileNavOpen(false)}
+          className="mb-3 flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-sm font-semibold text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" />
+          Quay lại trang chủ
+        </Link>
+      )}
+
+      {mode === "card" && cardName && (
+        <div className="mb-2 rounded-xl bg-rose-50 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-400">
+            Đang quản lý
+          </p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-rose-700">{cardName}</p>
+          {slug && (
+            <Link
+              href={`/thiep/${slug}`}
+              target="_blank"
+              className="mt-0.5 block truncate text-xs text-rose-500 hover:underline"
+            >
+              /thiep/{slug} →
+            </Link>
+          )}
+        </div>
+      )}
+
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = item.href ? isActiveHref(item.href) : false;
+
+        if (!item.href) {
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => toast.message("Tính năng đang được phát triển")}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-600 hover:bg-neutral-50"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">
+                <Icon className="h-4 w-4" />
+              </span>
+              <span>{item.label}</span>
+            </button>
+          );
+        }
+
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            onClick={(e) => {
+              handleGatedNav(item.href, item.label, e);
+              setMobileNavOpen(false);
+            }}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+              active ? "bg-rose-50 text-rose-700" : "text-neutral-800 hover:bg-neutral-50",
+            )}
+          >
+            <span
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                active ? "bg-rose-100 text-rose-600" : "bg-neutral-100 text-neutral-600",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+            {item.label}
+          </Link>
+        );
+      })}
+
+      {mode === "card" && cardId && (
+        <div className="mt-2 border-t border-neutral-100 pt-2">
+          <Link
+            href={
+              canOpenVisualEditorProp
+                ? `/dashboard/editor/${cardId}`
+                : `/dashboard/${cardId}/thiet-lap?needTemplate=1${
+                    invitationContentKind === "raw-html" ? "&source=html" : ""
+                  }`
+            }
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+              pathname.startsWith(`/dashboard/editor/${cardId}`)
+                ? "bg-rose-50 text-rose-700"
+                : "text-neutral-800 hover:bg-neutral-50",
+            )}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </span>
+            {canOpenVisualEditorProp ? "Trình chỉnh sửa" : "Chọn mẫu Craft"}
+          </Link>
+        </div>
+      )}
+
+      {mode === "home" && (
+        <div className="mt-2 border-t border-neutral-100 pt-2 space-y-1">
+          <Link
+            href="/dashboard/san-pham"
+            onClick={(e) => {
+              handleGatedNav("/dashboard/san-pham", "Sản phẩm liên kết", e);
+              setMobileNavOpen(false);
+            }}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+              isActiveHref("/dashboard/san-pham")
+                ? "bg-rose-50 text-rose-700"
+                : "text-neutral-800 hover:bg-neutral-50",
+            )}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
+              <ShoppingBag className="h-4 w-4" />
+            </span>
+            Sản phẩm liên kết
+          </Link>
+        </div>
+      )}
+    </nav>
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-neutral-100">
@@ -83,10 +261,14 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2 md:flex-none">
+          <Link
+            href={subscriptionActive ? "/dashboard" : SUBSCRIPTION_ACTIVATE_PATH}
+            onClick={(e) => handleGatedNav("/dashboard", "Quản lý thiệp cưới", e)}
+            className="flex min-w-0 flex-1 items-center gap-2 md:flex-none"
+          >
             <Image
               src={`${MEHAPPY_ASSET}/images/logo-trong.png`}
-              alt="meWedding"
+              alt="Royal Wedding"
               width={40}
               height={40}
               className="h-8 w-8 sm:h-10 sm:w-10"
@@ -96,7 +278,7 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
                 className="truncate text-lg font-bold leading-tight text-[#fb4141] sm:text-2xl"
                 style={{ fontFamily: '"Dancing Script", cursive' }}
               >
-                meWedding
+                Royal Wedding
               </p>
               <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 sm:text-xs">
                 Wedding Manager
@@ -124,6 +306,10 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
               <button
                 type="button"
                 onClick={() => {
+                  if (!subscriptionActive) {
+                    notifySubscriptionRequired({ feature: "Mua tính năng lẻ" });
+                    return;
+                  }
                   if (!cardId) {
                     toast.error("Chưa tìm thấy thiệp để mua tính năng");
                     return;
@@ -181,35 +367,7 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-              {DASHBOARD_NAV.filter((i) => i.href).map((item) => {
-                const Icon = item.icon;
-                const active =
-                  item.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href!}
-                    onClick={() => setMobileNavOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-                      active ? "bg-rose-50 text-rose-700" : "hover:bg-neutral-50",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-              <p className="px-3 pt-3 text-xs font-semibold uppercase text-neutral-400">Liên kết nhanh</p>
-              {DASHBOARD_QUICK_LINKS.map((l) => (
-                <Link key={l.href} href={l.href} onClick={() => setMobileNavOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50">
-                  {l.label}
-                </Link>
-              ))}
-            </nav>
+            <SidebarNav />
           </aside>
         </>
       )}
@@ -231,130 +389,7 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
               <X className="h-4 w-4" />
             </button>
           </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-            {DASHBOARD_NAV.map((item) => {
-              const Icon = item.icon;
-              const active =
-                item.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : item.href
-                    ? pathname === item.href || pathname.startsWith(`${item.href}/`)
-                    : false;
-
-              if (!item.href) {
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={comingSoon}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-600 hover:bg-neutral-50"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                );
-              }
-
-              if (item.children && item.children.length > 0) {
-                const childActive = item.children.some((child) =>
-                  child.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : pathname === child.href || pathname.startsWith(`${child.href}/`),
-                );
-                const parentRowActive = active && !childActive;
-
-                return (
-                  <div key={item.label} className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedHome((v) => !v)}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium",
-                        parentRowActive
-                          ? "bg-rose-50 text-rose-700"
-                          : active || childActive
-                            ? "text-rose-700 hover:bg-neutral-50"
-                            : "text-neutral-800 hover:bg-neutral-50",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                          active || childActive
-                            ? "bg-rose-100 text-rose-600"
-                            : "bg-neutral-100 text-neutral-600",
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="flex-1">{item.label}</span>
-                      <ChevronDown
-                        className={cn("h-4 w-4 shrink-0 transition", expandedHome && "rotate-180")}
-                      />
-                    </button>
-                    {expandedHome && (
-                      <div className="ml-5 space-y-1 border-l border-neutral-200 pl-3">
-                        {item.children.map((child) => {
-                          const childIsActive =
-                            child.href === "/dashboard"
-                              ? pathname === "/dashboard"
-                              : pathname === child.href || pathname.startsWith(`${child.href}/`);
-                          return (
-                            <Link
-                              key={child.label}
-                              href={child.href}
-                              className={cn(
-                                "block rounded-lg px-3 py-2 text-sm",
-                                childIsActive
-                                  ? "bg-rose-50 font-medium text-rose-700"
-                                  : "text-neutral-600 hover:bg-neutral-50",
-                              )}
-                            >
-                              {child.label}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href!}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-                    active ? "bg-rose-50 text-rose-700" : "text-neutral-800 hover:bg-neutral-50",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                      active ? "bg-rose-100 text-rose-600" : "bg-neutral-100 text-neutral-600",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          {slug && (
-            <div className="border-t border-neutral-100 p-3">
-              <Link
-                href={`/thiep/${slug}`}
-                target="_blank"
-                className="text-xs font-medium text-rose-600 hover:underline"
-              >
-                Xem thiệp công khai →
-              </Link>
-            </div>
-          )}
+          <SidebarNav />
         </aside>
 
         {!sidebarOpen && (
@@ -374,6 +409,13 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
               pathname === "/dashboard" ? "" : "mx-auto max-w-6xl px-4 py-6 pb-24 md:pb-8",
             )}
           >
+            {!subscriptionActive && (
+              <div className={pathname === "/dashboard" ? "px-4 pt-4" : "mb-0"}>
+                {pathname !== SUBSCRIPTION_ACTIVATE_PATH ? (
+                  <SubscriptionPaywallBanner />
+                ) : null}
+              </div>
+            )}
             {children}
           </div>
         </main>
@@ -387,15 +429,15 @@ export function DashboardChrome({ children, userEmail, fullName, plan, slug, car
       />
 
       {!hideSupportFab && (
-      <div className="pointer-events-none fixed bottom-6 right-4 z-fab flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom)] md:right-6">
-        <Link
-          href="/lien-he"
-          className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 shadow-lg ring-1 ring-neutral-200 transition hover:shadow-xl"
-        >
-          <HelpCircle className="h-5 w-5 text-sky-500" />
-          Hỗ trợ
-        </Link>
-      </div>
+        <div className="pointer-events-none fixed bottom-6 right-4 z-fab flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom)] md:right-6">
+          <Link
+            href="/lien-he"
+            className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 shadow-lg ring-1 ring-neutral-200 transition hover:shadow-xl"
+          >
+            <HelpCircle className="h-5 w-5 text-sky-500" />
+            Hỗ trợ
+          </Link>
+        </div>
       )}
     </div>
   );

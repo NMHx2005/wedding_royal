@@ -1,31 +1,77 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as Switch from "@radix-ui/react-switch";
 import { toast } from "sonner";
-import type { WeddingCard, WeddingPhoto } from "@/types";
-import { updateWeddingCard, checkSlugAvailable, addWeddingPhoto, deleteWeddingPhoto } from "@/app/actions/wedding-card";
+import type { WeddingCard, WeddingPhoto, TemplateRow, Plan } from "@/types";
+import { updateWeddingCard, checkSlugAvailable, addWeddingPhoto, deleteWeddingPhoto, applyTemplateToCard } from "@/app/actions/wedding-card";
 import { mapsUrlToEmbed } from "@/lib/utils";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
+import { MusicPresetPicker } from "@/components/dashboard/MusicPresetPicker";
+import type { ConfettiEffect } from "@/types";
 import { useRouter } from "next/navigation";
+import { planMeetsRequirement } from "@/lib/plans/plan-access";
+import { hasCardEditorContent } from "@/lib/editor/hasCardEditorContent";
+import { getContentJsonKind } from "@/lib/editor/contentJsonKind";
+import { toDatetimeLocalValue } from "@/lib/editor/cardFieldBinding";
+
+const PLAN_LABEL: Record<string, string> = {
+  basic: "BASIC",
+  pro: "PRO",
+  vip: "VIP",
+};
+
+const PLAN_COLOR: Record<string, string> = {
+  basic: "bg-gray-100 text-gray-600",
+  pro: "bg-blue-100 text-blue-700",
+  vip: "bg-amber-100 text-amber-700",
+};
+
+const CONFETTI_OPTIONS: { value: ConfettiEffect; label: string }[] = [
+  { value: "none", label: "Không hiệu ứng" },
+  { value: "hearts", label: "Trái tim" },
+  { value: "snow", label: "Tuyết rơi" },
+  { value: "petals", label: "Cánh hoa" },
+];
 
 type Props = {
   card: WeddingCard;
   photos: WeddingPhoto[];
+  templates?: TemplateRow[];
   initialTemplateFromQuery?: string;
+  needTemplateHint?: boolean;
+  templateSource?: string;
 };
 
-export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQuery }: Props) {
+export function ThietLapForm({
+  card,
+  photos: initialPhotos,
+  templates = [],
+  initialTemplateFromQuery,
+  needTemplateHint,
+  templateSource,
+}: Props) {
   const router = useRouter();
+
+  useEffect(() => {
+    if (needTemplateHint) {
+      toast.info(
+        templateSource === "html"
+          ? "Thiệp mẫu HTML không dùng trình chỉnh sửa kéo-thả. Chọn mẫu Craft bên dưới để chỉnh sửa (áp dụng mẫu mới sẽ thay nội dung hiện tại)."
+          : "Vui lòng chọn mẫu thiệp trước khi mở trình chỉnh sửa."
+      );
+    }
+  }, [needTemplateHint, templateSource]);
   const [pending, start] = useTransition();
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
   const [photos, setPhotos] = useState(initialPhotos);
   const [form, setForm] = useState(() => ({
     bride_name: card.bride_name,
     bride_parents: card.bride_parents ?? "",
     groom_name: card.groom_name,
     groom_parents: card.groom_parents ?? "",
-    wedding_date: card.wedding_date.slice(0, 16),
+    wedding_date: toDatetimeLocalValue(card.wedding_date),
     ceremony_time: card.ceremony_time ?? "",
     reception_time: card.reception_time ?? "",
     venue_name: card.venue_name ?? "",
@@ -129,9 +175,26 @@ export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQ
         <p className="text-sm text-neutral-600">Lưu từng tab sau khi chỉnh sửa.</p>
       </div>
 
-      <Tabs.Root defaultValue="basic" className="w-full">
+      {!hasCardEditorContent(card.content_json) && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {getContentJsonKind(card.content_json) === "raw-html" ? (
+            <>
+              Thiệp đang dùng <strong>mẫu HTML</strong> (xem thiệp bình thường). Để chỉnh sửa kéo-thả, chọn
+              mẫu <strong>Craft</strong> bên dưới — nội dung HTML hiện tại sẽ được thay bằng mẫu mới.
+            </>
+          ) : (
+            <>
+              Bước đầu tiên: chọn một mẫu thiệp bên dưới. Sau khi áp dụng mẫu, bạn mới có thể mở trình chỉnh
+              sửa.
+            </>
+          )}
+        </div>
+      )}
+
+      <Tabs.Root defaultValue="template" className="w-full">
         <Tabs.List className="flex flex-wrap gap-2 border-b border-neutral-200 pb-2">
           {[
+            ["template", "🎨 Chọn mẫu"],
             ["basic", "Thông tin"],
             ["story", "Câu chuyện"],
             ["album", "Album"],
@@ -148,6 +211,28 @@ export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQ
             </Tabs.Trigger>
           ))}
         </Tabs.List>
+
+        {/* ── Chọn mẫu thiệp ── */}
+        <Tabs.Content value="template" className="mt-4">
+          <TemplatePicker
+            card={card}
+            templates={templates}
+            applying={applyingTemplate}
+            onApply={(templateId) => {
+              setApplyingTemplate(templateId);
+              start(async () => {
+                const result = await applyTemplateToCard(card.id, templateId);
+                setApplyingTemplate(null);
+                if (result.error) {
+                  toast.error(result.error);
+                } else {
+                  toast.success("Đã chọn mẫu! Đang mở trình chỉnh sửa...");
+                  router.push(`/dashboard/editor/${card.id}`);
+                }
+              });
+            }}
+          />
+        </Tabs.Content>
 
         <Tabs.Content value="basic" className="mt-4 space-y-3 rounded-xl border border-neutral-100 bg-white p-4">
           <Field label="Tên cô dâu" value={form.bride_name} onChange={(v) => setForm((f) => ({ ...f, bride_name: v }))} />
@@ -282,41 +367,82 @@ export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQ
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="music" className="mt-4 space-y-3 rounded-xl border border-neutral-100 bg-white p-4">
-          <PhotoUpload
-            cardId={card.id}
-            plan={card.plan}
-            currentCount={form.background_music_url ? 1 : 0}
-            maxTotal={1}
-            bucket="wedding-music"
-            accept={{ "audio/mpeg": [".mp3"] }}
-            maxFiles={1}
-            label="Upload nhạc MP3"
-            onUploaded={async (url) => {
-              setForm((f) => ({ ...f, background_music_url: url }));
-              const { error } = await updateWeddingCard(card.id, { background_music_url: url });
-              if (error) toast.error(error);
-              else toast.success("Đã lưu nhạc nền");
-            }}
-          />
-          <div>
-            <label className="text-sm font-medium">Hiệu ứng rơi</label>
-            <select
-              className="mt-1 w-full rounded border px-2 py-1.5 text-sm"
-              value={form.confetti_effect}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  confetti_effect: e.target.value as WeddingCard["confetti_effect"],
-                }))
-              }
-            >
-              <option value="none">Không</option>
-              <option value="hearts">Tim</option>
-              <option value="snow">Tuyết</option>
-              <option value="petals">Hoa</option>
-            </select>
+        <Tabs.Content value="music" className="mt-4 space-y-5 rounded-xl border border-neutral-100 bg-white p-4">
+          <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+            Nhạc tự phát khi mở thiệp (đĩa nhạc góc phải — nhấn để tắt/bật). Trang tự cuộn chậm;
+            từng phần tử có hiệu ứng xuất hiện khi lướt tới. Confetti hiển thị toàn trang.
           </div>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-neutral-800">Nhạc nền</h3>
+            <MusicPresetPicker
+              selectedUrl={form.background_music_url || null}
+              disabled={pending}
+              onSelect={(url) => {
+                setForm((f) => ({ ...f, background_music_url: url }));
+                start(async () => {
+                  const { error } = await updateWeddingCard(card.id, {
+                    background_music_url: url,
+                  });
+                  if (error) toast.error(error);
+                  else toast.success("Đã chọn nhạc mẫu");
+                });
+              }}
+              onClear={() => {
+                setForm((f) => ({ ...f, background_music_url: "" }));
+                start(async () => {
+                  const { error } = await updateWeddingCard(card.id, {
+                    background_music_url: null,
+                  });
+                  if (error) toast.error(error);
+                  else toast.success("Đã xóa nhạc nền");
+                });
+              }}
+            />
+            <p className="text-xs text-neutral-500">Hoặc tải file MP3 của bạn (tối đa 1 file):</p>
+            <PhotoUpload
+              cardId={card.id}
+              plan={card.plan}
+              currentCount={form.background_music_url ? 1 : 0}
+              maxTotal={1}
+              bucket="wedding-music"
+              accept={{ "audio/mpeg": [".mp3"] }}
+              maxFiles={1}
+              label="Upload nhạc MP3"
+              onUploaded={async (url) => {
+                setForm((f) => ({ ...f, background_music_url: url }));
+                const { error } = await updateWeddingCard(card.id, { background_music_url: url });
+                if (error) toast.error(error);
+                else toast.success("Đã lưu nhạc nền");
+              }}
+            />
+          </section>
+
+          <section className="space-y-3 border-t border-neutral-100 pt-4">
+            <h3 className="text-sm font-semibold text-neutral-800">Hiệu ứng confetti</h3>
+            <p className="text-xs text-neutral-500">
+              Gói Pro trở lên mới bật được hiệu ứng (không phải &quot;Không hiệu ứng&quot;).
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {CONFETTI_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({ ...f, confetti_effect: opt.value }))
+                  }
+                  className={`rounded-xl border px-3 py-2.5 text-sm transition ${
+                    form.confetti_effect === opt.value
+                      ? "border-rose-400 bg-rose-50 font-semibold text-rose-600"
+                      : "border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           <button
             type="button"
             disabled={pending}
@@ -405,16 +531,13 @@ export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQ
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium">Mẫu thiệp</label>
-            <select
-              className="mt-1 w-full rounded border px-2 py-1.5 text-sm"
-              value={form.template_id}
-              onChange={(e) => setForm((f) => ({ ...f, template_id: e.target.value }))}
-            >
-              <option value="classic-white">Classic White</option>
-              <option value="golden-luxury">Golden Luxury (Pro+)</option>
-              <option value="minimal-modern">Minimal Modern (Pro+)</option>
-            </select>
+            <label className="text-sm font-medium">Mẫu thiệp đang dùng</label>
+            <p className="mt-1 text-sm text-neutral-500">
+              ID: <code className="bg-neutral-100 px-1 rounded text-xs">{form.template_id}</code>
+            </p>
+            <p className="mt-1 text-xs text-neutral-400">
+              Để đổi mẫu, chuyển sang tab <strong>🎨 Chọn mẫu</strong>.
+            </p>
           </div>
           <button
             type="button"
@@ -429,6 +552,139 @@ export function ThietLapForm({ card, photos: initialPhotos, initialTemplateFromQ
     </div>
   );
 }
+
+// ─── Template Picker ──────────────────────────────────────────────────────────
+
+function TemplatePicker({
+  card,
+  templates,
+  applying,
+  onApply,
+}: {
+  card: WeddingCard;
+  templates: TemplateRow[];
+  applying: string | null;
+  onApply: (templateId: string) => void;
+}) {
+  const userPlan = card.plan as Plan;
+
+  if (templates.length === 0) {
+    return (
+      <div className="rounded-xl border border-neutral-100 bg-white p-8 text-center">
+        <div className="text-4xl mb-3">🎨</div>
+        <p className="text-neutral-500 text-sm">Chưa có mẫu thiệp nào được kích hoạt.</p>
+        <p className="text-neutral-400 text-xs mt-1">Admin cần thêm mẫu từ trang quản trị.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-neutral-100 bg-white p-4">
+        <h2 className="text-base font-semibold text-neutral-800 mb-1">Chọn mẫu thiệp</h2>
+        <p className="text-sm text-neutral-500">
+          Chọn mẫu phù hợp với gói <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-bold ${PLAN_COLOR[userPlan] ?? "bg-gray-100 text-gray-600"}`}>{PLAN_LABEL[userPlan] ?? userPlan.toUpperCase()}</span> của bạn.
+          {" "}Mẫu bị khoá yêu cầu nâng cấp gói.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {templates.map((t) => {
+          const accessible = planMeetsRequirement(userPlan, t.plan_required as Plan);
+          const isApplying = applying === t.id;
+          const isActive = card.template_id === t.id;
+
+          return (
+            <div
+              key={t.id}
+              className={`relative flex flex-col overflow-hidden rounded-2xl border-2 transition-all ${
+                isActive
+                  ? "border-rose-400 shadow-md"
+                  : accessible
+                  ? "border-neutral-200 hover:border-indigo-300 hover:shadow-sm cursor-pointer"
+                  : "border-neutral-100 opacity-60"
+              }`}
+              onClick={() => accessible && !isApplying && onApply(t.id)}
+            >
+              {/* Thumbnail */}
+              <div className="relative aspect-[3/4] bg-gradient-to-br from-neutral-100 to-neutral-200">
+                {t.thumbnail_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={t.thumbnail_url}
+                    alt={t.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-300 gap-1">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs">Xem trước</span>
+                  </div>
+                )}
+
+                {/* Loading overlay */}
+                {isApplying && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                    <svg className="w-8 h-8 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Lock overlay for inaccessible */}
+                {!accessible && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-white gap-1">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span className="text-xs font-semibold">Nâng cấp gói</span>
+                  </div>
+                )}
+
+                {/* Active badge */}
+                {isActive && (
+                  <div className="absolute top-2 right-2 bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold shadow">
+                    Đang dùng
+                  </div>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="p-3 bg-white flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-neutral-800 truncate">{t.name}</p>
+                </div>
+                <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-bold ${PLAN_COLOR[t.plan_required] ?? "bg-gray-100 text-gray-600"}`}>
+                  {PLAN_LABEL[t.plan_required] ?? t.plan_required.toUpperCase()}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {hasCardEditorContent(card.content_json) && (
+        <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-indigo-800">Thiệp đã được thiết kế</p>
+            <p className="text-xs text-indigo-600 mt-0.5">Bạn có thể tiếp tục chỉnh sửa thiệp hiện tại.</p>
+          </div>
+          <a
+            href={`/dashboard/editor/${card.id}`}
+            className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+          >
+            Mở editor →
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Field input ──────────────────────────────────────────────────────────────
 
 function Field({
   label,

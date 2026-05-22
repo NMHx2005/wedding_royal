@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { formatPlanPriceDisplay } from "@/lib/plans/format-plan-price";
 import type { PlanPricesMap } from "@/lib/plans/get-plan-prices";
+import { labelForDashboardPath } from "@/lib/subscription/messages";
+import { notifySubscriptionRequired } from "@/lib/subscription/notify-subscription-required";
 import { formatVnd } from "@/lib/utils";
 import type { OrderRow, Plan } from "@/types";
 
@@ -12,6 +14,7 @@ type Props = {
   cardId: string;
   currentPlan: Plan;
   paidAt: string | null;
+  subscriptionActive: boolean;
   orders: OrderRow[];
   planPrices: PlanPricesMap;
 };
@@ -28,14 +31,28 @@ export function GoiDichVuClient({
   cardId,
   currentPlan,
   paidAt,
+  subscriptionActive,
   orders: initial,
   planPrices,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orders] = useState(initial);
+  const paywallToastShown = useRef(false);
 
-  const subscriptionActive = paidAt != null;
+  useEffect(() => {
+    if (searchParams.get("paywall") !== "1" || paywallToastShown.current) return;
+    paywallToastShown.current = true;
+
+    const from = searchParams.get("from");
+    const feature = from ? labelForDashboardPath(from) : undefined;
+    notifySubscriptionRequired({
+      feature,
+      description: feature
+        ? `"${feature}" cần gói dịch vụ đã kích hoạt. Chọn gói bên dưới và hoàn tất thanh toán để bắt đầu.`
+        : undefined,
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchParams.get("cancelled")) {
@@ -45,14 +62,19 @@ export function GoiDichVuClient({
 
     if (!searchParams.get("success")) return;
 
-    let cancelled = false;
     const orderId = searchParams.get("orderId");
+    if (!orderId) {
+      toast.error("Thiếu mã đơn hàng — vui lòng liên hệ hỗ trợ nếu đã thanh toán");
+      return;
+    }
+
+    let cancelled = false;
 
     void (async () => {
       const res = await fetch("/api/payos/sync-after-return", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderId ? { orderId } : {}),
+        body: JSON.stringify({ orderId }),
       });
       const data = (await res.json()) as { ok?: boolean; fulfilled?: boolean; error?: string };
       if (cancelled) return;
@@ -104,6 +126,11 @@ export function GoiDichVuClient({
           {subscriptionActive ? (
             <>
               Gói hiện tại: <strong className="text-mewedding-rose">{currentPlan.toUpperCase()}</strong>
+              {paidAt ? (
+                <span className="ml-2 text-neutral-500">
+                  (kích hoạt {new Date(paidAt).toLocaleDateString("vi-VN")})
+                </span>
+              ) : null}
             </>
           ) : (
             <>Chọn gói và thanh toán để bắt đầu sử dụng dashboard.</>
@@ -212,11 +239,11 @@ function PlanCard({
   return (
     <div
       className={`rounded-2xl border bg-white p-6 shadow-sm ${
-        highlight ? "border-2 border-pink-400 ring-2 ring-pink-100" : "border-neutral-100"
+        highlight ? "border-2 border-rose-500 ring-2 ring-rose-100" : "border-neutral-100"
       } ${isCurrent ? "ring-2 ring-emerald-200" : ""}`}
     >
       {highlight && (
-        <span className="mb-2 inline-block rounded-full bg-pink-100 px-2 py-0.5 text-xs font-semibold text-pink-700">
+        <span className="mb-2 inline-block rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">
           Phổ biến nhất
         </span>
       )}

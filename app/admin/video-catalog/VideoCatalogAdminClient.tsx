@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Save, X } from "lucide-react";
+import { AdminFilterSelect, AdminListControls } from "@/components/admin/AdminListControls";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/lib/admin/useAdminPagination";
+import { useConfirm } from "@/components/ui/ConfirmProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { VideoCatalog, VideoOrder, VideoOrderStatus } from "@/types";
 
@@ -34,6 +38,7 @@ function fmt(n: number) {
 }
 
 export default function VideoCatalogAdminClient({ catalog: initialCatalog, orders: initialOrders }: Props) {
+  const confirmDialog = useConfirm();
   const [catalog, setCatalog] = useState(initialCatalog);
   const [orders, setOrders] = useState(initialOrders);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -44,6 +49,51 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
   const [addForm, setAddForm] = useState({ name: "", description: "", price: 0, package: "basic" as VideoCatalog["package"], sort_order: 0, is_active: true });
   const [editForm, setEditForm] = useState({ name: "", description: "", price: 0, package: "basic" as VideoCatalog["package"], sort_order: 0, is_active: true });
   const [saving, setSaving] = useState(false);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [packageFilter, setPackageFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const filteredOrders = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (statusFilter !== "all" && o.status !== statusFilter) return false;
+      if (packageFilter !== "all" && o.package !== packageFilter) return false;
+      if (!needle) return true;
+      return (
+        (o.profiles?.full_name ?? "").toLowerCase().includes(needle) ||
+        o.user_id.toLowerCase().includes(needle) ||
+        o.title.toLowerCase().includes(needle) ||
+        o.package.toLowerCase().includes(needle)
+      );
+    });
+  }, [orders, q, statusFilter, packageFilter]);
+
+  const filteredCatalog = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return catalog.filter((c) => {
+      if (packageFilter !== "all" && c.package !== packageFilter) return false;
+      if (activeFilter === "active" && !c.is_active) return false;
+      if (activeFilter === "inactive" && c.is_active) return false;
+      if (!needle) return true;
+      return (
+        c.name.toLowerCase().includes(needle) ||
+        (c.description ?? "").toLowerCase().includes(needle) ||
+        c.package.toLowerCase().includes(needle)
+      );
+    });
+  }, [catalog, q, packageFilter, activeFilter]);
+
+  const orderPagination = useAdminPagination(filteredOrders, [tab, q, statusFilter, packageFilter]);
+  const catalogPagination = useAdminPagination(filteredCatalog, [tab, q, packageFilter, activeFilter]);
+
+  const handleTabChange = (t: "catalog" | "orders") => {
+    setTab(t);
+    setQ("");
+    setStatusFilter("all");
+    setPackageFilter("all");
+    setActiveFilter("all");
+  };
 
   const startEditOrder = (o: VideoOrderWithProfile) => {
     setEditingOrderId(o.id);
@@ -104,7 +154,13 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
   };
 
   const deleteCatalog = async (id: string) => {
-    if (!confirm("Xóa gói video này?")) return;
+    const ok = await confirmDialog({
+      title: "Xóa gói video",
+      message: "Bạn có chắc muốn xóa gói video này? Thao tác không thể hoàn tác.",
+      confirmLabel: "Xóa",
+      variant: "danger",
+    });
+    if (!ok) return;
     const supabase = createClient();
     await supabase.from("video_catalog").delete().eq("id", id);
     setCatalog((prev) => prev.filter((c) => c.id !== id));
@@ -117,11 +173,51 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
 
       <div className="flex gap-2 border-b border-neutral-200">
         {(["orders", "catalog"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`pb-2 px-4 text-sm font-medium capitalize ${tab === t ? "border-b-2 border-rose-500 text-rose-600" : "text-neutral-500 hover:text-neutral-700"}`}>
+          <button key={t} onClick={() => handleTabChange(t)} className={`pb-2 px-4 text-sm font-medium capitalize ${tab === t ? "border-b-2 border-rose-500 text-rose-600" : "text-neutral-500 hover:text-neutral-700"}`}>
             {t === "orders" ? "Video Orders" : "Catalog"}
           </button>
         ))}
       </div>
+
+      <AdminListControls
+        query={q}
+        onQueryChange={setQ}
+        placeholder={tab === "orders" ? "Tìm theo user, tiêu đề..." : "Tìm theo tên gói, mô tả..."}
+        pageSize={tab === "orders" ? orderPagination.pageSize : catalogPagination.pageSize}
+        onPageSizeChange={tab === "orders" ? orderPagination.setPageSize : catalogPagination.setPageSize}
+      >
+        {tab === "orders" && (
+          <>
+            <AdminFilterSelect value={statusFilter} onChange={setStatusFilter}>
+              <option value="all">Tất cả trạng thái</option>
+              {Object.entries(STATUS_LABELS).map(([k, label]) => (
+                <option key={k} value={k}>{label}</option>
+              ))}
+            </AdminFilterSelect>
+            <AdminFilterSelect value={packageFilter} onChange={setPackageFilter}>
+              <option value="all">Tất cả gói</option>
+              <option value="basic">basic</option>
+              <option value="pro">pro</option>
+              <option value="vip">vip</option>
+            </AdminFilterSelect>
+          </>
+        )}
+        {tab === "catalog" && (
+          <>
+            <AdminFilterSelect value={packageFilter} onChange={setPackageFilter}>
+              <option value="all">Tất cả gói</option>
+              <option value="basic">basic</option>
+              <option value="pro">pro</option>
+              <option value="vip">vip</option>
+            </AdminFilterSelect>
+            <AdminFilterSelect value={activeFilter} onChange={(v) => setActiveFilter(v as "all" | "active" | "inactive")}>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang bán</option>
+              <option value="inactive">Ẩn</option>
+            </AdminFilterSelect>
+          </>
+        )}
+      </AdminListControls>
 
       {tab === "catalog" && (
         <div className="space-y-4">
@@ -130,8 +226,14 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
               <Plus className="h-4 w-4" /> Thêm gói
             </button>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {catalog.map((c) => (
+          {filteredCatalog.length === 0 ? (
+            <div className="rounded-xl border border-neutral-200 bg-white py-12 text-center text-neutral-400">
+              {catalog.length === 0 ? "Chưa có gói video" : "Không có kết quả phù hợp bộ lọc"}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {(catalogPagination.paginated as VideoCatalog[]).map((c) => (
               <div key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -155,14 +257,28 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
                   {!c.is_active && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500">Ẩn</span>}
                 </div>
               </div>
-            ))}
-          </div>
+                ))}
+              </div>
+              <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                <AdminPagination
+                  page={catalogPagination.page}
+                  totalPages={catalogPagination.totalPages}
+                  rangeStart={catalogPagination.rangeStart}
+                  rangeEnd={catalogPagination.rangeEnd}
+                  filteredCount={catalogPagination.filteredCount}
+                  totalCount={catalog.length}
+                  onPageChange={catalogPagination.setPage}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {tab === "orders" && (
-        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
             <thead className="border-b border-neutral-100 bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-neutral-500">
               <tr>
                 <th className="px-4 py-3 text-left">User</th>
@@ -175,7 +291,7 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
-              {orders.map((o) =>
+              {orderPagination.paginated.map((o) =>
                 editingOrderId === o.id ? (
                   <tr key={o.id} className="bg-rose-50">
                     <td className="px-4 py-2 text-xs">{o.profiles?.full_name || o.user_id.slice(0, 8)}</td>
@@ -227,13 +343,23 @@ export default function VideoCatalogAdminClient({ catalog: initialCatalog, order
                   </tr>
                 )
               )}
-              {orders.length === 0 && (
+              {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-neutral-400">Chưa có đơn video nào</td>
+                  <td colSpan={7} className="py-12 text-center text-neutral-400">{orders.length === 0 ? "Chưa có đơn video nào" : "Không có kết quả phù hợp bộ lọc"}</td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
+          <AdminPagination
+            page={orderPagination.page}
+            totalPages={orderPagination.totalPages}
+            rangeStart={orderPagination.rangeStart}
+            rangeEnd={orderPagination.rangeEnd}
+            filteredCount={orderPagination.filteredCount}
+            totalCount={orders.length}
+            onPageChange={orderPagination.setPage}
+          />
         </div>
       )}
 
