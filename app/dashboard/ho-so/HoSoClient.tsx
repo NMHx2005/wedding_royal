@@ -84,7 +84,7 @@ function ProfileForm({
   role: "bride" | "groom";
   form: Partial<BrideGroomProfile>;
   setForm: React.Dispatch<React.SetStateAction<Partial<BrideGroomProfile>>>;
-  avatarRef: React.RefObject<HTMLInputElement | null>;
+  avatarRef: React.MutableRefObject<HTMLInputElement | null>;
   uploading: boolean;
   saving: boolean;
   onSave: () => void;
@@ -113,7 +113,9 @@ function ProfileForm({
           </button>
           <p className="mt-1 text-xs text-neutral-400">JPG, PNG, tối đa 2MB</p>
           <input
-            ref={avatarRef}
+            ref={(node) => {
+              avatarRef.current = node;
+            }}
             type="file"
             accept="image/*"
             className="hidden"
@@ -206,8 +208,8 @@ export default function HoSoClient({ card, profiles: initialProfiles }: Props) {
     hashtag: card?.hashtag ?? "",
   });
 
-  const groomAvatarRef = useRef<HTMLInputElement>(null);
-  const brideAvatarRef = useRef<HTMLInputElement>(null);
+  const groomAvatarRef = useRef<HTMLInputElement | null>(null);
+  const brideAvatarRef = useRef<HTMLInputElement | null>(null);
   const profilesSyncedRef = useRef(false);
 
   useEffect(() => {

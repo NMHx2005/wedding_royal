@@ -72,12 +72,13 @@ export function FloatingPropertyPanel() {
   const [pos, setPos] = useState({ x: 0, y: 80 });
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [hidden, setHidden] = useState(false);
+  const initialViewportWidthRef = useRef(viewportWidth);
 
   useEffect(() => {
     const initial = loadState();
     setMode(initial.mode);
     setWidth(initial.width);
-    const def = defaultPosition(initial.width, viewportWidth);
+    const def = defaultPosition(initial.width, initialViewportWidthRef.current);
     const x = initial.x > 0 ? initial.x : def.x;
     const y = initial.y > 0 ? initial.y : def.y;
     setPos(clampPosition(x, y, initial.width));
